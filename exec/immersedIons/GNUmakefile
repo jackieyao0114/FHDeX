@@ -8,6 +8,7 @@ DEBUG     = FALSE
 PROFILE   = FALSE
 USE_MPI   = TRUE
 USE_OMP   = FALSE
+USE_CUDA  = TRUE
 COMP      = gnu
 DIM       = 3
 DSMC      = FALSE
