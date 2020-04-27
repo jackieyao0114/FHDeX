@@ -137,7 +137,8 @@ void main_driver(const char* argv)
         }
 
         //Initialise rngs
-        rng_initialize(&fhdSeed,&particleSeed,&selectorSeed,&thetaSeed,&phiSeed,&generalSeed);
+        rng_initialize(&fhdSeed,&particleSeed,&selectorSeed,&thetaSeed,&phiSeed,&generalSeed); //fortran rng
+        InitRandom(fhdSeed); //C++/CUDA rng
 
         // Initialize the boxarray "ba" from the single box "bx"
         ba.define(domain);
@@ -243,6 +244,16 @@ void main_driver(const char* argv)
         ReadCheckPoint(step,time,statsCount,umac,umacM,umacV,pres,
                        particleMeans,particleVars,chargeM,chargeV,
                        potential,potentialM,potentialV);
+
+        int fhdSeed      = 0;
+        // "seed" controls all of them and gives distinct seeds to each physical process over each MPI process
+        // this should be fixed so each physical process has its own seed control
+
+        if (seed > 0) {
+            fhdSeed      = ParallelDescriptor::MyProc() + seed;
+        }
+
+        InitRandom(fhdSeed); //C++/CUDA rng  THIS RNG IS NOT CURRENTLY READING STATE FROM RESTART
 
         // grab DistributionMap from umac
         dmap = umac[0].DistributionMap();

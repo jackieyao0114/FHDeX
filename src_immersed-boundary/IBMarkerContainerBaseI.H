@@ -104,7 +104,8 @@ void IBMarkerContainerBase<StructReal, StructInt>::RFD(
             for (int d=0; d<AMREX_SPACEDIM; ++d) {
                 // using pred_pos to temporarily store the random direction -
                 // hopefully this doesn't cause problems elsewhere
-                part.rdata(StructReal::pred_posx + d) =  get_particle_normal_func();
+//                part.rdata(StructReal::pred_posx + d) =  get_particle_normal_func();
+                part.rdata(StructReal::pred_posx + d) = amrex::RandomNormal(0.,1.);
 
                 // move particle to q^n + (dt/2) * Wtilde
                 part.pos(d) += deltaover2 * part.rdata(StructReal::pred_posx + d);
