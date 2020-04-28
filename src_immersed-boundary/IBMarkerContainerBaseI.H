@@ -437,7 +437,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadMarkers(
         }
 
         SpreadMarkers(f_in, f_pos, tile_box,
-                      f_out_fab, f_weights_fab, coords_fab, dx, ghost, & mfi);
+                      f_out_fab, f_weights_fab, coords_fab, dx, ghost);
     }
 }
 
@@ -480,7 +480,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadMarkers(
                   std::array<      FArrayBox *, AMREX_SPACEDIM> & f_out,
                   std::array<      FArrayBox *, AMREX_SPACEDIM> & f_weights,
             const std::array<const FArrayBox *, AMREX_SPACEDIM> & coords,
-            const Real* dx, int ghost, MFIter* mfi
+            const Real* dx, int ghost
         ) {
 
     const int n_marker = f_pos.size();
@@ -507,7 +507,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadMarkers(
 	    for (int j=0; j<AMREX_SPACEDIM; ++j)
 		    v_spread[j] = f_in[j][i];
 
-	    SpreadKernel(bx, f_out, f_weights, coords, pos, v_spread, dx, & ghost, & mfi);
+	    SpreadKernel(bx, f_out, f_weights, coords, pos, v_spread, dx, & ghost);
     }
 }
 
@@ -544,7 +544,7 @@ Real kernel_3p(Real r_in)
 
 
 AMREX_GPU_HOST_DEVICE AMREX_INLINE
-Real beta(Real r)
+Real beta_kernel(Real r)
 {
     Real beta;
     Real K = 59.0/60 - std::sqrt(29.0)/20.0;
@@ -563,7 +563,7 @@ Real beta(Real r)
 }
 
 AMREX_GPU_HOST_DEVICE AMREX_INLINE
-Real gamma(Real r)
+Real gamma_kernel(Real r)
 {
     Real gamma;
     Real K = 59.0/60 - std::sqrt(29.0)/20.0;
@@ -584,13 +584,13 @@ Real phi1(Real r)
 {
     Real phi1;
     Real K = 59.0/60 - std::sqrt(29.0)/20.0;
-    Real sgn = (3.0/2 - K)/std::abs(3.0/2 - K);
+    Real sgn = (3.0/2.0 - K)/std::abs(3.0/2.0 - K);
 
     //pre-computed ratios
     Real alpha = 28.0;
     Real inv_alpha = 1.0/(2.0*alpha);
 
-    phi1 = inv_alpha*( -beta(r) + sgn * std::sqrt(beta(r)*beta(r) - 4*alpha*gamma(r)) );
+    phi1 = inv_alpha*( -beta_kernel(r) + sgn * std::sqrt(beta_kernel(r)*beta_kernel(r) - 4*alpha*gamma_kernel(r)) );
 
     return phi1;
 }
@@ -667,14 +667,13 @@ Real kernel_6p(Real r_in)
 
 template <typename StructReal, typename StructInt>
 void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx, 
-         std::array<MultiFab, AMREX_SPACEDIM> & f_out, 
-         std::array<MultiFab, AMREX_SPACEDIM> & f_weights, 
-         const Vector<std::array<MultiFab, AMREX_SPACEDIM>> & face_coords, 
+         std::array<     FArrayBox *, AMREX_SPACEDIM> & f_out, 
+         std::array<     FArrayBox *, AMREX_SPACEDIM> & f_weights, 
+         const std::array<const FArrayBox *, AMREX_SPACEDIM> & coords, 
          const Real* pos, 
          const Real* v_spread, 
          const Real* dx, 
-         int* nghost, 
-         MFIter* mfi) const 
+         int* nghost)  
 {
 
     int i, j, k, ilo, ihi, jlo, jhi, klo, khi, gs;
@@ -692,7 +691,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx,
         gs = 4;
     }
 
-    Real invdx[AMREX_SPACEDIM];
+    const GpuArray<Real, AMREX_SPACEDIM> invdx;
     Real invvol = 1.0;
 
     for (int i=0; i<AMREX_SPACEDIM; ++i)
@@ -736,34 +735,27 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx,
     IntVect scalz_hi(ihi,jhi,khi+1);
     const Box bx_z(scalz_lo, scalz_hi);    
 
-
-    Array4<Real> const& fout_x = f_out[0].array(*mfi);
-    Array4<Real> const& fout_y = f_out[1].array(*mfi);
-    Array4<Real> const& fout_z = f_out[2].array(*mfi);
-    Array4<Real> const& fweights_x = f_weights[0].array(*mfi);
-    Array4<Real> const& fweights_y = f_weights[1].array(*mfi);
-    Array4<Real> const& fweights_z = f_weights[2].array(*mfi);
-    Array4<const Real> const& faceCoordsx_x = face_coords[0][0].array(*mfi);
-    Array4<const Real> const& faceCoordsx_y = face_coords[0][1].array(*mfi);
-    Array4<const Real> const& faceCoordsx_z = face_coords[0][2].array(*mfi);
-    Array4<const Real> const& faceCoordsy_x = face_coords[1][0].array(*mfi);
-    Array4<const Real> const& faceCoordsy_y = face_coords[1][1].array(*mfi);
-    Array4<const Real> const& faceCoordsy_z = face_coords[1][2].array(*mfi);
-    Array4<const Real> const& faceCoordsz_x = face_coords[2][0].array(*mfi);
-    Array4<const Real> const& faceCoordsz_y = face_coords[2][1].array(*mfi);
-    Array4<const Real> const& faceCoordsz_z = face_coords[2][2].array(*mfi);
+    Array4<Real> const& fout_x = f_out[0]->array();
+    Array4<Real> const& fout_y = f_out[1]->array();
+    Array4<Real> const& fout_z = f_out[2]->array();
+    Array4<Real> const& fweights_x = f_weights[0]->array();
+    Array4<Real> const& fweights_y = f_weights[1]->array();
+    Array4<Real> const& fweights_z = f_weights[2]->array();
+    Array4<const Real> const& coords_x = coords[0]->array();
+    Array4<const Real> const& coords_y = coords[1]->array();
+    Array4<const Real> const& coords_z = coords[2]->array();
 
     const int spaceDim = AMREX_SPACEDIM;
 
     // x-components
     amrex::ParallelFor(bx_x,
-      [invdx,invvol,v_spread,fout_x,fweights_x,faceCoordsx_x,faceCoordsx_y,faceCoordsx_z,spaceDim,kernel_ptr]
+      [=]
       AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
-         Real pos_grid[3];
-         pos_grid[0]=(pos_grid[0]-faceCoordsx_x(i,j,k))*invdx[0];
-         pos_grid[1]=(pos_grid[1]-faceCoordsx_y(i,j,k))*invdx[1];
-         pos_grid[2]=(pos_grid[2]-faceCoordsx_z(i,j,k))*invdx[2];
+         Real pos_grid[3] = {0.0,0.0,0.0};
+         pos_grid[0]=(pos_grid[0]-coords_x(i,j,k))*invdx[0];
+         pos_grid[1]=(pos_grid[1]-coords_y(i,j,k))*invdx[1];
+         pos_grid[2]=(pos_grid[2]-coords_z(i,j,k))*invdx[2];
 
          Real weight = 1.0;
          for (int i=0; i<spaceDim; ++i)
@@ -775,13 +767,13 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx,
 
     // y-components
     amrex::ParallelFor(bx_y,
-      [invdx,invvol,v_spread,fout_y,fweights_y,faceCoordsy_x,faceCoordsy_y,faceCoordsy_z,spaceDim,kernel_ptr]
+      [=]
       AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
-         Real pos_grid[3];
-         pos_grid[0]=(pos_grid[0]-faceCoordsy_x(i,j,k))*invdx[0];
-         pos_grid[1]=(pos_grid[1]-faceCoordsy_y(i,j,k))*invdx[1];
-         pos_grid[2]=(pos_grid[2]-faceCoordsy_z(i,j,k))*invdx[2];
+         Real pos_grid[3] = {0.0,0.0,0.0};
+         pos_grid[0]=(pos_grid[0]-coords_x(i,j,k))*invdx[0];
+         pos_grid[1]=(pos_grid[1]-coords_y(i,j,k))*invdx[1];
+         pos_grid[2]=(pos_grid[2]-coords_z(i,j,k))*invdx[2];
 
          Real weight = 1.0;
          for (int i=0; i<spaceDim; ++i)
@@ -793,19 +785,19 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx,
 
     // z-components
     amrex::ParallelFor(bx_z,
-      [invdx,invvol,v_spread,fout_z,fweights_z,faceCoordsz_x,faceCoordsz_y,faceCoordsz_z,spaceDim,kernel_ptr]
+      [=]
       AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
-         Real pos_grid[3];
-         pos_grid[0]=(pos_grid[0]-faceCoordsz_x(i,j,k))*invdx[0];
-         pos_grid[1]=(pos_grid[1]-faceCoordsz_y(i,j,k))*invdx[1];
-         pos_grid[2]=(pos_grid[2]-faceCoordsz_z(i,j,k))*invdx[2];
+         Real pos_grid[3] = {0.0,0.0,0.0};
+         pos_grid[0]=(pos_grid[0]-coords_x(i,j,k))*invdx[0];
+         pos_grid[1]=(pos_grid[1]-coords_y(i,j,k))*invdx[1];
+         pos_grid[2]=(pos_grid[2]-coords_z(i,j,k))*invdx[2];
 
          Real weight = 1.0;
          for (int i=0; i<spaceDim; ++i)
              weight*=(*kernel_ptr)(pos_grid[i]);
 
-         fout_z(i,j,k) += v_spread[0]*weight*invvol;
+         fout_z(i,j,k) += v_spread[2]*weight*invvol;
          fweights_z(i,j,k) += weight;
     });
 }

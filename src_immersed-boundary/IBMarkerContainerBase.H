@@ -103,18 +103,17 @@ public:
                       std::array<      FArrayBox *, AMREX_SPACEDIM> & f_out,
                       std::array<      FArrayBox *, AMREX_SPACEDIM> & f_weights,
                 const std::array<const FArrayBox *, AMREX_SPACEDIM> & coords,
-                const Real* dx, int ghost, MFIter* mfi
+                const Real* dx, int ghost
             );
 
-    void SpreadKernel(const Box& bx, 
-                      std::array<MultiFab, AMREX_SPACEDIM> & f_out,
-                      std::array<MultiFab, AMREX_SPACEDIM> & f_weights,
-                      const Vector<std::array<MultiFab, AMREX_SPACEDIM>> & face_coords,
+    static void SpreadKernel(const Box& bx, 
+                      std::array<      FArrayBox *, AMREX_SPACEDIM> & f_out,
+                      std::array<      FArrayBox *, AMREX_SPACEDIM> & f_weights,
+                      const std::array<const FArrayBox *, AMREX_SPACEDIM> & coords,
                       const Real* pos, 
                       const Real* v_spread,
                       const Real* dx, 
-                      int* nghost, 
-                      MFIter* mfi) const;
+                      int* nghost);
     //---------------------------------------------------------------------------
 
 
