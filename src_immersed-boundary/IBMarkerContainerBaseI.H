@@ -491,24 +491,29 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadMarkers(
     Real pos[AMREX_SPACEDIM]; 
     Real v_spread[AMREX_SPACEDIM];
 
-    for (int i=0; i<n_marker; ++i) {
-	    for (int j=0; j<AMREX_SPACEDIM; ++j)
-		    pos[j] = f_pos[j][i];
-	    if (ghost == 0){
-		    if (pos[0] < tile_box.loVect()[0]*dx[0]) continue;
-		    if (pos[0] >= (tile_box.hiVect()[0]+1)*dx[0]) continue;
+    for (int i=0; i<n_marker; ++i) 
+    {
+       for (int j=0; j<AMREX_SPACEDIM; ++j)
+       {          
+          pos[j] = f_pos[j][i];
+       }
+       if (ghost == 0)
+       {
+          if (pos[0] < tile_box.loVect()[0]*dx[0]) continue;
+          if (pos[0] >= (tile_box.hiVect()[0]+1)*dx[0]) continue;
 
-		    if (pos[1] < tile_box.loVect()[1]*dx[1]) continue;
-		    if (pos[1] >= (tile_box.hiVect()[1]+1)*dx[1]) continue;
+          if (pos[1] < tile_box.loVect()[1]*dx[1]) continue;
+          if (pos[1] >= (tile_box.hiVect()[1]+1)*dx[1]) continue;
 
-		    if (pos[2] < tile_box.loVect()[2]*dx[2]) continue;
-		    if (pos[2] >= (tile_box.hiVect()[2]+1)*dx[2]) continue; 
-	    }
-	    for (int j=0; j<AMREX_SPACEDIM; ++j)
-		    v_spread[j] = f_in[j][i];
-
-	    SpreadKernel(bx, f_out, f_weights, coords, pos, v_spread, dx, & ghost);
-    }
+          if (pos[2] < tile_box.loVect()[2]*dx[2]) continue;
+          if (pos[2] >= (tile_box.hiVect()[2]+1)*dx[2]) continue; 
+       }
+       for (int j=0; j<AMREX_SPACEDIM; ++j)
+       {
+          v_spread[j] = f_in[j][i];
+       }
+       SpreadKernel(bx, f_out, f_weights, coords, pos, v_spread, dx, & ghost);
+   }
 }
 
 AMREX_GPU_HOST_DEVICE AMREX_INLINE
@@ -1008,7 +1013,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateMarkers(
     // Convert stagered boxes into cell centered
     Box bx = enclosedCells(f_in[0]->box());
 
-    interpolate_markers(BL_TO_FORTRAN_BOX(bx),
+/*    interpolate_markers(BL_TO_FORTRAN_BOX(bx),
                         BL_TO_FORTRAN_BOX(tile_box),
                         BL_TO_FORTRAN_ANYD(* f_in[0]),
 #if (AMREX_SPACEDIM > 1)
@@ -1035,10 +1040,197 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateMarkers(
                         f_out.dataPtr(),
                         & n_marker,
                         dx );
+*/
+    Real pos[AMREX_SPACEDIM]; 
+    Real v_spread[AMREX_SPACEDIM];
 
+    for (int i=0; i<n_marker; ++i) 
+    {
+       for (int j=0; j<AMREX_SPACEDIM; ++j)
+       {     
+          pos[j] = f_pos[j][i];
+       }
+       if (pos[0] < tile_box.loVect()[0]*dx[0]) continue;
+       if (pos[0] >= (tile_box.hiVect()[0]+1)*dx[0]) continue;
+       if (pos[1] < tile_box.loVect()[1]*dx[1]) continue;
+       if (pos[1] >= (tile_box.hiVect()[1]+1)*dx[1]) continue;
+       if (pos[2] < tile_box.loVect()[2]*dx[2]) continue;
+       if (pos[2] >= (tile_box.hiVect()[2]+1)*dx[2]) continue;
+       for (int j=0; j<AMREX_SPACEDIM; ++j)
+       {
+          v_spread[j] = 0.0;
+       }
+       InterpolateKernel(bx, f_out, f_weights, coords, pos, v_spread, dx, & ghost);
+       for (int j=0; j<AMREX_SPACEDIM; ++j)
+       {
+          f_out[j][i] = v_spread[j];
+       }
+    }
 }
 
+template <typename StructReal, typename StructInt>
+void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& bx, 
+         std::array<     FArrayBox *, AMREX_SPACEDIM> & f_out, 
+         std::array<     FArrayBox *, AMREX_SPACEDIM> & f_weights, 
+         const std::array<const FArrayBox *, AMREX_SPACEDIM> & coords, 
+         const Real* pos, 
+         const Real* v_spread, 
+         const Real* dx, 
+         int* nghost)  
+{
 
+    int i, j, k, ilo, ihi, jlo, jhi, klo, khi, gs;
+
+    Real (*kernel_ptr) (Real );
+
+    if(pkernel_fluid == 3) 
+    {
+        kernel_ptr = &kernel_3p;
+        gs = 2;
+    }
+    else 
+    {
+        kernel_ptr = &kernel_6p;
+        gs = 4;
+    }
+
+    const GpuArray<Real, AMREX_SPACEDIM> invdx;
+    Real invvol = 1.0;
+
+    for (int i=0; i<AMREX_SPACEDIM; ++i)
+        invdx[i]=1.0/dx[i];
+
+    for (int i=0; i<AMREX_SPACEDIM; ++i)
+        invvol *= invdx[i]; 
+
+    if (nghost == 0)
+    {
+        int loc = floor(pos[0] * invdx[0] - gs);
+        ilo = std::max(bx.loVect()[0], loc);
+        loc = floor(pos[0] * invdx[0] + gs);
+        ihi = std::max(bx.hiVect()[0], loc);
+        loc = floor(pos[1] * invdx[1] - gs);
+        jlo = std::max(bx.loVect()[1], loc);
+        loc = floor(pos[1] * invdx[1] + gs);
+        jhi = std::max(bx.hiVect()[1], loc);
+        loc = floor(pos[2] * invdx[2] - gs);
+        klo = std::max(bx.loVect()[2], loc);
+        loc = floor(pos[2] * invdx[2] + gs);
+        khi = std::max(bx.hiVect()[2], loc);
+    }
+    else
+    {
+        ilo = floor(pos[0] * invdx[0] - gs);
+        ihi = floor(pos[0] * invdx[0] + gs);
+        jlo = floor(pos[1] * invdx[1] - gs);
+        jhi = floor(pos[1] * invdx[1] + gs);
+        klo = floor(pos[2] * invdx[2] - gs);
+        khi = floor(pos[2] * invdx[2] + gs); 
+    }
+
+    IntVect scalx_lo(ilo,jlo,klo);
+    IntVect scalx_hi(ihi+1,jhi,khi);
+    const Box bx_x(scalx_lo, scalx_hi);
+    IntVect scaly_lo(ilo,jlo,klo);
+    IntVect scaly_hi(ihi,jhi+1,khi);
+    const Box bx_y(scaly_lo, scaly_hi);
+    IntVect scalz_lo(ilo,jlo,klo);
+    IntVect scalz_hi(ihi,jhi,khi+1);
+    const Box bx_z(scalz_lo, scalz_hi);    
+
+    Array4<Real> const& fout_x = f_out[0]->array();
+    Array4<Real> const& fout_y = f_out[1]->array();
+    Array4<Real> const& fout_z = f_out[2]->array();
+    Array4<Real> const& fweights_x = f_weights[0]->array();
+    Array4<Real> const& fweights_y = f_weights[1]->array();
+    Array4<Real> const& fweights_z = f_weights[2]->array();
+    Array4<const Real> const& coords_x = coords[0]->array();
+    Array4<const Real> const& coords_y = coords[1]->array();
+    Array4<const Real> const& coords_z = coords[2]->array();
+
+    const int spaceDim = AMREX_SPACEDIM;
+
+    // x-components
+    amrex::ParallelFor(bx_x,
+      [=]
+      AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+    {
+         Real pos_grid[3] = {0.0,0.0,0.0};
+         pos_grid[0]=(pos_grid[0]-coords_x(i,j,k))*invdx[0];
+         pos_grid[1]=(pos_grid[1]-coords_y(i,j,k))*invdx[1];
+         pos_grid[2]=(pos_grid[2]-coords_z(i,j,k))*invdx[2];
+
+         Real weight = 1.0;
+         for (int i=0; i<spaceDim; ++i)
+             weight*=(*kernel_ptr)(pos_grid[i]);
+
+         Real wfrac = 1.0;
+         if (fweights_x(i,j,k) > 0)
+         {
+            wfrac = weight/fweights_x(i,j,k);
+         }
+         else
+         {
+            wfrac = 1.0;
+         }
+
+         v_spread[0] = v_spread[0]+ fout_x(i,j,k)*wfrac*weight;
+    });
+
+    // y-components
+    amrex::ParallelFor(bx_y,
+      [=]
+      AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+    {
+         Real pos_grid[3] = {0.0,0.0,0.0};
+         pos_grid[0]=(pos_grid[0]-coords_x(i,j,k))*invdx[0];
+         pos_grid[1]=(pos_grid[1]-coords_y(i,j,k))*invdx[1];
+         pos_grid[2]=(pos_grid[2]-coords_z(i,j,k))*invdx[2];
+
+         Real weight = 1.0;
+         for (int i=0; i<spaceDim; ++i)
+             weight*=(*kernel_ptr)(pos_grid[i]);
+
+         Real wfrac = 1.0;
+         if (fweights_y(i,j,k) > 0)
+         {
+            wfrac = weight/fweights_y(i,j,k);
+         }
+         else
+         {
+            wfrac = 1.0;
+         }
+
+         v_spread[1] = v_spread[1]+ fout_y(i,j,k)*wfrac*weight;
+    });
+
+    // z-components
+    amrex::ParallelFor(bx_z,
+      [=]
+      AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+    {
+         Real pos_grid[3] = {0.0,0.0,0.0};
+         pos_grid[0]=(pos_grid[0]-coords_x(i,j,k))*invdx[0];
+         pos_grid[1]=(pos_grid[1]-coords_y(i,j,k))*invdx[1];
+         pos_grid[2]=(pos_grid[2]-coords_z(i,j,k))*invdx[2];
+
+         Real weight = 1.0;
+         for (int i=0; i<spaceDim; ++i)
+             weight*=(*kernel_ptr)(pos_grid[i]);
+
+         Real wfrac = 1.0;
+         if (fweights_z(i,j,k) > 0)
+         {
+            wfrac = weight/fweights_z(i,j,k);
+         }
+         else
+         {
+            wfrac = 1.0;
+         }
+
+         v_spread[2] = v_spread[2]+ fout_z(i,j,k)*wfrac*weight;
+    });
+}
 
 template <typename StructReal, typename StructInt>
 void IBMarkerContainerBase<StructReal, StructInt>::InterpolateMarkers(

@@ -154,6 +154,15 @@ public:
                 const std::array<const FArrayBox *, AMREX_SPACEDIM> & coords,
                 const Real * dx, const int ghost
             );
+
+    static void InterpolateKernel(const Box& bx,
+                      std::array<      FArrayBox *, AMREX_SPACEDIM> & f_out,
+                      std::array<      FArrayBox *, AMREX_SPACEDIM> & f_weights,
+                      const std::array<const FArrayBox *, AMREX_SPACEDIM> & coords,
+                      const Real* pos,
+                      const Real* v_spread,
+                      const Real* dx,
+                      int* nghost);
     //---------------------------------------------------------------------------
 
 
