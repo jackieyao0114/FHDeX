@@ -1060,7 +1060,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateMarkers(
        {
           v_spread[j] = 0.0;
        }
-       InterpolateKernel(bx, f_out, f_weights, coords, pos, v_spread, dx, & ghost);
+       InterpolateKernel(bx, f_in, f_weights, coords, pos, v_spread, dx, & ghost);
        for (int j=0; j<AMREX_SPACEDIM; ++j)
        {
           f_out[j][i] = v_spread[j];
@@ -1070,13 +1070,13 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateMarkers(
 
 template <typename StructReal, typename StructInt>
 void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& bx, 
-         std::array<     FArrayBox *, AMREX_SPACEDIM> & f_out, 
-         std::array<     FArrayBox *, AMREX_SPACEDIM> & f_weights, 
+         const std::array<const FArrayBox *, AMREX_SPACEDIM> & f_in, 
+         const std::array<const FArrayBox *, AMREX_SPACEDIM> & f_weights, 
          const std::array<const FArrayBox *, AMREX_SPACEDIM> & coords, 
          const Real* pos, 
-         const Real* v_spread, 
+         Real* v_spread, 
          const Real* dx, 
-         int* nghost)  
+         const int* nghost)  
 {
 
     int i, j, k, ilo, ihi, jlo, jhi, klo, khi, gs;
@@ -1138,12 +1138,12 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& 
     IntVect scalz_hi(ihi,jhi,khi+1);
     const Box bx_z(scalz_lo, scalz_hi);    
 
-    Array4<Real> const& fout_x = f_out[0]->array();
-    Array4<Real> const& fout_y = f_out[1]->array();
-    Array4<Real> const& fout_z = f_out[2]->array();
-    Array4<Real> const& fweights_x = f_weights[0]->array();
-    Array4<Real> const& fweights_y = f_weights[1]->array();
-    Array4<Real> const& fweights_z = f_weights[2]->array();
+    Array4<const Real> const& fin_x = f_in[0]->array();
+    Array4<const Real> const& fin_y = f_in[1]->array();
+    Array4<const Real> const& fin_z = f_in[2]->array();
+    Array4<const Real> const& fweights_x = f_weights[0]->array();
+    Array4<const Real> const& fweights_y = f_weights[1]->array();
+    Array4<const Real> const& fweights_z = f_weights[2]->array();
     Array4<const Real> const& coords_x = coords[0]->array();
     Array4<const Real> const& coords_y = coords[1]->array();
     Array4<const Real> const& coords_z = coords[2]->array();
@@ -1174,7 +1174,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& 
             wfrac = 1.0;
          }
 
-         v_spread[0] = v_spread[0]+ fout_x(i,j,k)*wfrac*weight;
+         v_spread[0] = v_spread[0]+fin_x(i,j,k)*wfrac*weight;
     });
 
     // y-components
@@ -1201,7 +1201,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& 
             wfrac = 1.0;
          }
 
-         v_spread[1] = v_spread[1]+ fout_y(i,j,k)*wfrac*weight;
+         v_spread[1] = v_spread[1]+fin_y(i,j,k)*wfrac*weight;
     });
 
     // z-components
@@ -1228,7 +1228,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& 
             wfrac = 1.0;
          }
 
-         v_spread[2] = v_spread[2]+ fout_z(i,j,k)*wfrac*weight;
+         v_spread[2] = v_spread[2]+fin_z(i,j,k)*wfrac*weight;
     });
 }
 
