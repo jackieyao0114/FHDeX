@@ -225,23 +225,25 @@ void IBMarkerContainerBase<StructReal, StructInt>::PullDown(
 
         if (element >= 0) {
 
-            for (int i = 0; i < np; ++i) {
+            AMREX_FOR_1D( np, i,
+            {
                 ParticleType & part = particles[i];
                 id = part.id();
                 //std::cout << id << " of " << totalParticles << std::endl;
                 list[id-1] = particles[i].rdata(StructReal::radius + element);
-            }
+            });
 
         } else {
 
-            for (int i = 0; i < np; ++i) {
+            AMREX_FOR_1D( np, i,
+            {
                 ParticleType & part = particles[i];
                 id = part.id();
                 list[id-1] = part.pos((-element)-1);
 
               //  std::cout << "Proc " << ParallelDescriptor::MyProc() << " storing " << part.pos((-element)-1)
                 //                               << " from " << i << " in position " << id-1 << std::endl;
-            }
+            });
         }
     }
 
@@ -284,12 +286,13 @@ void IBMarkerContainerBase<StructReal, StructInt>::PullDownInt(
         int id;
         if (element >= 0) {
 
-            for (int i = 0; i < np; ++i) {
+            AMREX_FOR_1D( np, i,
+            {
                 ParticleType & part = particles[i];
                 id = part.id();
                 //std::cout << id << " of " << totalParticles << std::endl;
                 list[id-1] = particles[i].idata(StructInt::sorted + element);
-            }
+            });
 
         } 
     }
@@ -347,21 +350,23 @@ void IBMarkerContainerBase<StructReal, StructInt>::PushUpAdd(
         int id;
         if(element >= 0) {
 
-            for (int i = 0; i < np; ++i) {
+            AMREX_FOR_1D( np, i,
+            {
                 ParticleType & part = particles[i];
                 id = part.id();
 
                 particles[i].rdata(StructReal::radius + element) = particles[i].rdata(StructReal::radius + element) + list[id-1];
-            }
+            });
 
         } else {
 
-            for (int i = 0; i < np; ++i) {
+            AMREX_FOR_1D( np, i,
+            { 
                 ParticleType & part = particles[i];
                 id = part.id();
 
                 particles[i].pos((-element)-1) = particles[i].pos((-element)-1) + list[id-1];
-            }
+            });
         }
     }
 }
@@ -378,14 +383,15 @@ void IBMarkerContainerBase<StructReal, StructInt>::ResetMarkers(int lev) {
         long np = this->GetParticles(lev).at(index).numParticles();
 
         AoS & particles = particle_data.GetArrayOfStructs();
-        for (int i = 0; i < np; ++i) {
+        AMREX_FOR_1D( np, i,
+        {
             ParticleType & part = particles[i];
 
             for (int d=0; d<AMREX_SPACEDIM; ++d) {
                 part.rdata(StructReal::velx + d)   = 0.;
                 part.rdata(StructReal::forcex + d) = 0.;
             }
-        }
+        });
     }
 }
 
@@ -550,6 +556,40 @@ Real kernel_3p(Real r_in)
     return kernel_3p;
 }
 
+AMREX_GPU_HOST_DEVICE AMREX_INLINE
+Real kernel_4p(Real r_in)
+{
+    Real kernel_4p;
+
+    Real r2 = r_in*r_in;
+
+    if (r_in <= -2)
+    {
+       kernel_4p = 0.0;
+    }
+    else if (r_in <= -1)
+    {
+       kernel_4p = 0.125*(5.0 + (2.0*r_in) - std::sqrt(-7.0-(12.0*r_in) - (4.0*r2)));
+    }
+    else if (r_in <= 0)
+    {
+       kernel_4p = 0.125*(3.0 + (2.0*r_in) + std::sqrt(1.0 - (4.0*r_in) - (4.0*r2)));
+    }
+    else if (r_in <= 1)
+    {
+       kernel_4p = 0.125*(3.0 - (2.0*r_in) + std::sqrt(1.0 + (4.0*r_in) - (4.0*r2)));
+    }
+    else if (r_in <= 2)
+    {
+       kernel_4p = 0.125*(5.0 - (2.0*r_in) - std::sqrt(-7.0 + (12.0*r_in) - (4.0*r2)));
+    }
+    else
+    {
+       kernel_4p = 0.0;
+    }
+
+    return kernel_4p;
+}
 
 AMREX_GPU_HOST_DEVICE AMREX_INLINE
 Real beta_kernel(Real r)
@@ -692,6 +732,11 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx,
     {
         kernel_ptr = &kernel_3p;
         gs = 2;
+    }
+    else if (pkernel_fluid == 4)
+    {
+        kernel_ptr = &kernel_4p;
+        gs = 3;
     }
     else 
     {
@@ -1090,6 +1135,11 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& 
     {
         kernel_ptr = &kernel_3p;
         gs = 2;
+    }
+    else if (pkernel_fluid == 4)
+    {
+        kernel_ptr = &kernel_4p;
+        gs = 3;
     }
     else 
     {
