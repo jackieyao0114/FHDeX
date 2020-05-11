@@ -696,7 +696,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx,
         gs = 4;
     }
 
-    const GpuArray<Real, AMREX_SPACEDIM> invdx;
+    GpuArray<Real, AMREX_SPACEDIM> invdx;
     Real invvol = 1.0;
 
     for (int i=0; i<AMREX_SPACEDIM; ++i)
