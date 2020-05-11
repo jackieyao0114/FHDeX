@@ -509,7 +509,35 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadMarkers(
 
     // Convert stagered boxes into cell centered
     Box bx = enclosedCells(f_out[0]->box());
-
+/*
+    spread_markers(BL_TO_FORTRAN_BOX(bx),
+                   BL_TO_FORTRAN_BOX(tile_box),
+                   BL_TO_FORTRAN_ANYD(* f_out[0]),
+#if (AMREX_SPACEDIM > 1)
+                   BL_TO_FORTRAN_ANYD(* f_out[1]),
+#endif
+#if (AMREX_SPACEDIM > 2)
+                   BL_TO_FORTRAN_ANYD(* f_out[2]),
+#endif
+                   BL_TO_FORTRAN_ANYD(* f_weights[0]),
+#if (AMREX_SPACEDIM > 1)
+                   BL_TO_FORTRAN_ANYD(* f_weights[1]),
+#endif
+#if (AMREX_SPACEDIM > 2)
+                   BL_TO_FORTRAN_ANYD(* f_weights[2]),
+#endif
+                   BL_TO_FORTRAN_ANYD(* coords[0]),
+#if (AMREX_SPACEDIM > 1)
+                   BL_TO_FORTRAN_ANYD(* coords[1]),
+#endif
+#if (AMREX_SPACEDIM > 2)
+                   BL_TO_FORTRAN_ANYD(* coords[2]),
+#endif
+                   f_pos.dataPtr(),
+                   f_in.dataPtr(),
+                   & n_marker,
+                   dx, & ghost);
+*/
     Real pos[AMREX_SPACEDIM]; 
     Real v_spread[AMREX_SPACEDIM];
 
@@ -766,29 +794,29 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx,
     for (int i=0; i<AMREX_SPACEDIM; ++i)
         invvol *= invdx[i]; 
 
-    if (nghost == 0)
+    if (*nghost == 0)
     {
-        int loc = floor(pos[0] * invdx[0] - gs);
+        int loc = static_cast<int>(pos[0] * invdx[0] - gs);
         ilo = std::max(bx.loVect()[0], loc);
-        loc = floor(pos[0] * invdx[0] + gs);
+        loc = static_cast<int>(pos[0] * invdx[0] + gs);
         ihi = std::max(bx.hiVect()[0], loc);
-        loc = floor(pos[1] * invdx[1] - gs);
+        loc = static_cast<int>(pos[1] * invdx[1] - gs);
         jlo = std::max(bx.loVect()[1], loc);
-        loc = floor(pos[1] * invdx[1] + gs);
+        loc = static_cast<int>(pos[1] * invdx[1] + gs);
         jhi = std::max(bx.hiVect()[1], loc);
-        loc = floor(pos[2] * invdx[2] - gs);
+        loc = static_cast<int>(pos[2] * invdx[2] - gs);
         klo = std::max(bx.loVect()[2], loc);
-        loc = floor(pos[2] * invdx[2] + gs);
+        loc = static_cast<int>(pos[2] * invdx[2] + gs);
         khi = std::max(bx.hiVect()[2], loc);
     }
     else
     {
-        ilo = floor(pos[0] * invdx[0] - gs);
-        ihi = floor(pos[0] * invdx[0] + gs);
-        jlo = floor(pos[1] * invdx[1] - gs);
-        jhi = floor(pos[1] * invdx[1] + gs);
-        klo = floor(pos[2] * invdx[2] - gs);
-        khi = floor(pos[2] * invdx[2] + gs); 
+        ilo = static_cast<int>(pos[0] * invdx[0] - gs);
+        ihi = static_cast<int>(pos[0] * invdx[0] + gs);
+        jlo = static_cast<int>(pos[1] * invdx[1] - gs);
+        jhi = static_cast<int>(pos[1] * invdx[1] + gs);
+        klo = static_cast<int>(pos[2] * invdx[2] - gs);
+        khi = static_cast<int>(pos[2] * invdx[2] + gs); 
     }
 
     IntVect scalx_lo(ilo,jlo,klo);
@@ -800,7 +828,6 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx,
     IntVect scalz_lo(ilo,jlo,klo);
     IntVect scalz_hi(ihi,jhi,khi+1);
     const Box bx_z(scalz_lo, scalz_hi);    
-
     Array4<Real> const& fout_x = f_out[0]->array();
     Array4<Real> const& fout_y = f_out[1]->array();
     Array4<Real> const& fout_z = f_out[2]->array();
@@ -820,8 +847,8 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx,
     {
          Real pos_grid[3] = {0.0,0.0,0.0};
          pos_grid[0]=(pos_grid[0]-coords_x(i,j,k))*invdx[0];
-         pos_grid[1]=(pos_grid[1]-coords_y(i,j,k))*invdx[1];
-         pos_grid[2]=(pos_grid[2]-coords_z(i,j,k))*invdx[2];
+         pos_grid[1]=(pos_grid[1]-coords_x(i,j,k))*invdx[1];
+         pos_grid[2]=(pos_grid[2]-coords_x(i,j,k))*invdx[2];
 
          Real weight = 1.0;
          for (int i=0; i<spaceDim; ++i)
@@ -837,9 +864,9 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx,
       AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
          Real pos_grid[3] = {0.0,0.0,0.0};
-         pos_grid[0]=(pos_grid[0]-coords_x(i,j,k))*invdx[0];
+         pos_grid[0]=(pos_grid[0]-coords_y(i,j,k))*invdx[0];
          pos_grid[1]=(pos_grid[1]-coords_y(i,j,k))*invdx[1];
-         pos_grid[2]=(pos_grid[2]-coords_z(i,j,k))*invdx[2];
+         pos_grid[2]=(pos_grid[2]-coords_y(i,j,k))*invdx[2];
 
          Real weight = 1.0;
          for (int i=0; i<spaceDim; ++i)
@@ -855,8 +882,8 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx,
       AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
          Real pos_grid[3] = {0.0,0.0,0.0};
-         pos_grid[0]=(pos_grid[0]-coords_x(i,j,k))*invdx[0];
-         pos_grid[1]=(pos_grid[1]-coords_y(i,j,k))*invdx[1];
+         pos_grid[0]=(pos_grid[0]-coords_z(i,j,k))*invdx[0];
+         pos_grid[1]=(pos_grid[1]-coords_z(i,j,k))*invdx[1];
          pos_grid[2]=(pos_grid[2]-coords_z(i,j,k))*invdx[2];
 
          Real weight = 1.0;
@@ -1169,29 +1196,29 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& 
     for (int i=0; i<AMREX_SPACEDIM; ++i)
         invvol *= invdx[i]; 
 
-    if (nghost == 0)
+    if (*nghost == 0)
     {
-        int loc = floor(pos[0] * invdx[0] - gs);
+        int loc = static_cast<int>(pos[0] * invdx[0] - gs);
         ilo = std::max(bx.loVect()[0], loc);
-        loc = floor(pos[0] * invdx[0] + gs);
+        loc = static_cast<int>(pos[0] * invdx[0] + gs);
         ihi = std::max(bx.hiVect()[0], loc);
-        loc = floor(pos[1] * invdx[1] - gs);
+        loc = static_cast<int>(pos[1] * invdx[1] - gs);
         jlo = std::max(bx.loVect()[1], loc);
-        loc = floor(pos[1] * invdx[1] + gs);
+        loc = static_cast<int>(pos[1] * invdx[1] + gs);
         jhi = std::max(bx.hiVect()[1], loc);
-        loc = floor(pos[2] * invdx[2] - gs);
+        loc = static_cast<int>(pos[2] * invdx[2] - gs);
         klo = std::max(bx.loVect()[2], loc);
-        loc = floor(pos[2] * invdx[2] + gs);
+        loc = static_cast<int>(pos[2] * invdx[2] + gs);
         khi = std::max(bx.hiVect()[2], loc);
     }
     else
     {
-        ilo = floor(pos[0] * invdx[0] - gs);
-        ihi = floor(pos[0] * invdx[0] + gs);
-        jlo = floor(pos[1] * invdx[1] - gs);
-        jhi = floor(pos[1] * invdx[1] + gs);
-        klo = floor(pos[2] * invdx[2] - gs);
-        khi = floor(pos[2] * invdx[2] + gs); 
+        ilo = static_cast<int>(pos[0] * invdx[0] - gs);
+        ihi = static_cast<int>(pos[0] * invdx[0] + gs);
+        jlo = static_cast<int>(pos[1] * invdx[1] - gs);
+        jhi = static_cast<int>(pos[1] * invdx[1] + gs);
+        klo = static_cast<int>(pos[2] * invdx[2] - gs);
+        khi = static_cast<int>(pos[2] * invdx[2] + gs); 
     }
 
     IntVect scalx_lo(ilo,jlo,klo);
@@ -1223,8 +1250,8 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& 
     {
          Real pos_grid[3] = {0.0,0.0,0.0};
          pos_grid[0]=(pos_grid[0]-coords_x(i,j,k))*invdx[0];
-         pos_grid[1]=(pos_grid[1]-coords_y(i,j,k))*invdx[1];
-         pos_grid[2]=(pos_grid[2]-coords_z(i,j,k))*invdx[2];
+         pos_grid[1]=(pos_grid[1]-coords_x(i,j,k))*invdx[1];
+         pos_grid[2]=(pos_grid[2]-coords_x(i,j,k))*invdx[2];
 
          Real weight = 1.0;
          for (int i=0; i<spaceDim; ++i)
@@ -1249,9 +1276,9 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& 
       AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
          Real pos_grid[3] = {0.0,0.0,0.0};
-         pos_grid[0]=(pos_grid[0]-coords_x(i,j,k))*invdx[0];
+         pos_grid[0]=(pos_grid[0]-coords_y(i,j,k))*invdx[0];
          pos_grid[1]=(pos_grid[1]-coords_y(i,j,k))*invdx[1];
-         pos_grid[2]=(pos_grid[2]-coords_z(i,j,k))*invdx[2];
+         pos_grid[2]=(pos_grid[2]-coords_y(i,j,k))*invdx[2];
 
          Real weight = 1.0;
          for (int i=0; i<spaceDim; ++i)
@@ -1276,8 +1303,8 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& 
       AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
          Real pos_grid[3] = {0.0,0.0,0.0};
-         pos_grid[0]=(pos_grid[0]-coords_x(i,j,k))*invdx[0];
-         pos_grid[1]=(pos_grid[1]-coords_y(i,j,k))*invdx[1];
+         pos_grid[0]=(pos_grid[0]-coords_z(i,j,k))*invdx[0];
+         pos_grid[1]=(pos_grid[1]-coords_z(i,j,k))*invdx[1];
          pos_grid[2]=(pos_grid[2]-coords_z(i,j,k))*invdx[2];
 
          Real weight = 1.0;
