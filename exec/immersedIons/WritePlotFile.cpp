@@ -184,6 +184,9 @@ void WritePlotFile(int step,
        // outputMFAscii(particleMeans[2], asciiName7);
        // outputMFAscii(particleMeans[3], asciiName8);
 
+        std::string asciiName = Concatenate("asciiMeans",step,9);
+        outputMFAscii(particleMeans, asciiName);
+
         std::string asciiPName = Concatenate("asciiParticles",step,9);
         particles.WriteParticlesAscii(asciiPName);
     }
