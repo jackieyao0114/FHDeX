@@ -733,6 +733,11 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx,
         kernel_ptr = &kernel_3p;
         gs = 2;
     }
+    else if (pkernel_fluid == 4)
+    {
+        kernel_ptr = &kernel_4p;
+        gs = 3;
+    }
     else 
     {
         kernel_ptr = &kernel_6p;
@@ -1130,6 +1135,11 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& 
     {
         kernel_ptr = &kernel_3p;
         gs = 2;
+    }
+    else if (pkernel_fluid == 4)
+    {
+        kernel_ptr = &kernel_4p;
+        gs = 3;
     }
     else 
     {
