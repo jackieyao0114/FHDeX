@@ -167,6 +167,14 @@ public:
 
 
 
+    void InterpolateMarkers(
+            int lev,
+            const Real * dx,
+            const std::array<MultiFab, AMREX_SPACEDIM> & f_in,
+            const std::array<MultiFab, AMREX_SPACEDIM> & coords
+        );
+
+
     //___________________________________________________________________________
     // Interpolation operators applied to internal force fields (in amrex::Particles)
     void InterpolateMarkers(int lev,

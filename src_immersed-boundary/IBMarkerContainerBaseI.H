@@ -749,7 +749,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx,
     else if (pkernel_fluid == 4)
     {
         kernel_ptr = &kernel_4p;
-        gs = 3;
+        gs = 4;
     }
     else 
     {
@@ -1152,7 +1152,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& 
     else if (pkernel_fluid == 4)
     {
         kernel_ptr = &kernel_4p;
-        gs = 3;
+        gs = 4;
     }
     else 
     {
@@ -1372,6 +1372,86 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateMarkers(
 
             for (int d=0; d<AMREX_SPACEDIM; ++d)
                 part.rdata(StructReal::velx + d) += marker_forces[i][d];
+        }
+    }
+}
+
+template <typename StructReal, typename StructInt>
+void IBMarkerContainerBase<StructReal, StructInt>::InterpolateMarkers(
+            int lev,
+            const Real * dx,
+            const std::array<MultiFab, AMREX_SPACEDIM> & f_in,
+            const std::array<MultiFab, AMREX_SPACEDIM> & coords
+        ) {
+
+
+    //___________________________________________________________________________
+    // Geometry data
+    const Geometry & geom = this->Geom(0);
+//    const Real     *   dx = geom.CellSize();
+
+    //___________________________________________________________________________
+    // We don't need these spreading weights => create a dummy MF
+    std::array<MultiFab, AMREX_SPACEDIM> f_weights;
+    for (int d=0; d<AMREX_SPACEDIM; ++d) {
+        f_weights[d].define(f_in[d].boxArray(), f_in[d].DistributionMap(),
+                            1, f_in[d].nGrow());
+        f_weights[d].setVal(-1.);
+    }
+
+
+    // for (MFIter pti = MakeMFIter(lev, true); pti.isValid(); ++pti) {
+    for (MyIBMarIter pti(* this, lev); pti.isValid(); ++pti) {
+
+        // Marker (non-neighbor particle) data for current tile
+        TileIndex index(pti.index(), pti.LocalTileIndex());
+        auto & particle_data = this->GetParticles(lev).at(index);
+
+        //_______________________________________________________________________
+        // Fill vector of marker positions and vels (for current level)
+        long np = this->GetParticles(lev).at(index).numParticles();
+
+        Vector<RealVect> marker_positions(np), marker_vels(np);
+
+        AoS & particles = particle_data.GetArrayOfStructs();
+        for (int i = 0; i < np; ++i) {
+            const ParticleType & part = particles[i];
+
+            RealVect ppos, pfor;
+            for (int d=0; d<AMREX_SPACEDIM; ++d)
+                ppos[d] = part.pos(d);
+
+            // pfor should be (0, .., 0)
+
+            marker_positions[i] = ppos;
+            marker_vels[i]    = pfor;
+        }
+
+
+        //_______________________________________________________________________
+        // Interpolate the non-neighbor particles (markers)
+
+        // Convert stagered boxes into cell centered
+        Box tile_box = enclosedCells(f_in[0][pti].box());
+
+        std::array<const FArrayBox *, AMREX_SPACEDIM> f_in_fab;
+        std::array<const FArrayBox *, AMREX_SPACEDIM> f_weights_fab;
+        std::array<const FArrayBox *, AMREX_SPACEDIM> coords_fab;
+        for (int d=0; d<AMREX_SPACEDIM; ++d) {
+            f_in_fab[d]      = & f_in[d][pti];
+            f_weights_fab[d] = & f_weights[d][pti];
+            coords_fab[d]    = & coords[d][pti];
+        }
+
+        InterpolateMarkers(marker_vels, marker_positions, tile_box,
+                           f_in_fab, f_weights_fab, coords_fab, dx, 0);
+
+        // Add interpolated markers back to the particles (markers)
+        for (int i = 0; i < np; ++i) {
+            ParticleType & part = particles[i];
+
+            for (int d=0; d<AMREX_SPACEDIM; ++d)
+                part.rdata(StructReal::velx + d) = marker_vels[i][d];
         }
     }
 }
