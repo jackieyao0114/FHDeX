@@ -556,6 +556,40 @@ Real kernel_3p(Real r_in)
     return kernel_3p;
 }
 
+AMREX_GPU_HOST_DEVICE AMREX_INLINE
+Real kernel_4p(Real r_in)
+{
+    Real kernel_4p;
+
+    Real r2 = r_in*r_in;
+
+    if (r_in <= -2)
+    {
+       kernel_4p = 0.0;
+    }
+    else if (r_in <= -1)
+    {
+       kernel_4p = 0.125*(5.0 + (2.0*r_in) - std::sqrt(-7.0-(12.0*r_in) - (4.0*r2)));
+    }
+    else if (r_in <= 0)
+    {
+       kernel_4p = 0.125*(3.0 + (2.0*r_in) + std::sqrt(1.0 - (4.0*r_in) - (4.0*r2)));
+    }
+    else if (r_in <= 1)
+    {
+       kernel_4p = 0.125*(3.0 - (2.0*r_in) + std::sqrt(1.0 + (4.0*r_in) - (4.0*r2)));
+    }
+    else if (r_in <= 2)
+    {
+       kernel_4p = 0.125*(5.0 - (2.0*r_in) - std::sqrt(-7.0 + (12.0*r_in) - (4.0*r2)));
+    }
+    else
+    {
+       kernel_4p = 0.0;
+    }
+
+    return kernel_4p;
+}
 
 AMREX_GPU_HOST_DEVICE AMREX_INLINE
 Real beta_kernel(Real r)
