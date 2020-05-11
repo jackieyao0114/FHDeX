@@ -517,7 +517,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadMarkers(
     {
        for (int j=0; j<AMREX_SPACEDIM; ++j)
        {          
-          pos[j] = f_pos[j][i];
+          pos[j] = f_pos[i][j];
        }
        if (ghost == 0)
        {
@@ -532,7 +532,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadMarkers(
        }
        for (int j=0; j<AMREX_SPACEDIM; ++j)
        {
-          v_spread[j] = f_in[j][i];
+          v_spread[j] = f_in[i][j];
        }
        SpreadKernel(bx, f_out, f_weights, coords, pos, v_spread, dx, & ghost);
    }
