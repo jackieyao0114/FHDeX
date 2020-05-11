@@ -98,7 +98,8 @@ void IBMarkerContainerBase<StructReal, StructInt>::RFD(
         AoS & particles = this->GetParticles(lev).at(index).GetArrayOfStructs();
         long np = this->GetParticles(lev).at(index).numParticles();
 
-        for (int i=0; i<np; ++i) {
+        AMREX_FOR_1D( np, i,
+        {
             ParticleType & part = particles[i];
 
             for (int d=0; d<AMREX_SPACEDIM; ++d) {
@@ -118,7 +119,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::RFD(
 
             }
 
-        }
+        });
     }
 
     // spread this term into the velocity forcing
@@ -131,7 +132,8 @@ void IBMarkerContainerBase<StructReal, StructInt>::RFD(
         AoS & particles = this->GetParticles(lev).at(index).GetArrayOfStructs();
         long np = this->GetParticles(lev).at(index).numParticles();
 
-        for (int i=0; i<np; ++i) {
+        AMREX_FOR_1D( np, i,
+        {
             ParticleType & part = particles[i];
 
             for (int d=0; d<AMREX_SPACEDIM; ++d) {
@@ -146,7 +148,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::RFD(
                     -force * part.rdata(StructReal::pred_posx + d);
 
             }
-        }
+        });
     }
 
     // spread this term into the velocity forcing
@@ -159,7 +161,8 @@ void IBMarkerContainerBase<StructReal, StructInt>::RFD(
         AoS & particles = this->GetParticles(lev).at(index).GetArrayOfStructs();
         long np = this->GetParticles(lev).at(index).numParticles();
 
-        for (int i=0; i<np; ++i) {
+        AMREX_FOR_1D( np, i,
+        {
             ParticleType & part = particles[i];
 
             for (int d=0; d<AMREX_SPACEDIM; ++d) {
@@ -169,7 +172,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::RFD(
                 // scale by 0
                 part.rdata(StructReal::forcex + d) = 0;
             }
-        }
+        });
     }
 }
 
