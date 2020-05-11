@@ -93,10 +93,12 @@ void IBMarkerContainerBase<StructReal, StructInt>::RFD(
 
     for (MyIBMarIter pti(* this, lev); pti.isValid(); ++pti) {
 
-        TileIndex index(pti.index(), pti.LocalTileIndex());
-
-        AoS & particles = this->GetParticles(lev).at(index).GetArrayOfStructs();
-        long np = this->GetParticles(lev).at(index).numParticles();
+	PairIndex index(pti.index(), pti.LocalTileIndex());
+	const int np = this->GetParticles(lev)[index].numRealParticles();
+	auto& plev = this->GetParticles(lev);
+	auto& ptile = plev[index];
+	auto& aos   = ptile.GetArrayOfStructs();
+	ParticleType* particles = aos().dataPtr();
 
         AMREX_FOR_1D( np, i,
         {
@@ -127,10 +129,12 @@ void IBMarkerContainerBase<StructReal, StructInt>::RFD(
 
     for (MyIBMarIter pti(* this, lev); pti.isValid(); ++pti) {
 
-        TileIndex index(pti.index(), pti.LocalTileIndex());
-
-        AoS & particles = this->GetParticles(lev).at(index).GetArrayOfStructs();
-        long np = this->GetParticles(lev).at(index).numParticles();
+        PairIndex index(pti.index(), pti.LocalTileIndex());
+        const int np = this->GetParticles(lev)[index].numRealParticles();
+        auto& plev = this->GetParticles(lev);
+        auto& ptile = plev[index];
+        auto& aos   = ptile.GetArrayOfStructs();
+        ParticleType* particles = aos().dataPtr();
 
         AMREX_FOR_1D( np, i,
         {
@@ -156,10 +160,12 @@ void IBMarkerContainerBase<StructReal, StructInt>::RFD(
 
     for (MyIBMarIter pti(* this, lev); pti.isValid(); ++pti) {
 
-        TileIndex index(pti.index(), pti.LocalTileIndex());
-
-        AoS & particles = this->GetParticles(lev).at(index).GetArrayOfStructs();
-        long np = this->GetParticles(lev).at(index).numParticles();
+        PairIndex index(pti.index(), pti.LocalTileIndex());
+        const int np = this->GetParticles(lev)[index].numRealParticles();
+        auto& plev = this->GetParticles(lev);
+        auto& ptile = plev[index];
+        auto& aos   = ptile.GetArrayOfStructs();
+        ParticleType* particles = aos().dataPtr();
 
         AMREX_FOR_1D( np, i,
         {
@@ -215,11 +221,12 @@ void IBMarkerContainerBase<StructReal, StructInt>::PullDown(
 
     for (MyIBMarIter pti(* this, lev); pti.isValid(); ++pti) {
 
-        TileIndex index(pti.index(), pti.LocalTileIndex());
-        AoS & particles = this->GetParticles(lev).at(index).GetArrayOfStructs();
-        long np = this->GetParticles(lev).at(index).numParticles();
-
-        int id;
+        PairIndex index(pti.index(), pti.LocalTileIndex());
+        const int np = this->GetParticles(lev)[index].numRealParticles();
+        auto& plev = this->GetParticles(lev);
+        auto& ptile = plev[index];
+        auto& aos   = ptile.GetArrayOfStructs();
+        ParticleType* particles = aos().dataPtr();
 
        //std::cout << "Proc " << ParallelDescriptor::MyProc() << " sees " << np << " particles." <<std::endl;
 
@@ -228,7 +235,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::PullDown(
             AMREX_FOR_1D( np, i,
             {
                 ParticleType & part = particles[i];
-                id = part.id();
+                int id = part.id();
                 //std::cout << id << " of " << totalParticles << std::endl;
                 list[id-1] = particles[i].rdata(StructReal::radius + element);
             });
@@ -238,7 +245,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::PullDown(
             AMREX_FOR_1D( np, i,
             {
                 ParticleType & part = particles[i];
-                id = part.id();
+                int id = part.id();
                 list[id-1] = part.pos((-element)-1);
 
               //  std::cout << "Proc " << ParallelDescriptor::MyProc() << " storing " << part.pos((-element)-1)
@@ -279,17 +286,19 @@ void IBMarkerContainerBase<StructReal, StructInt>::PullDownInt(
 
     for (MyIBMarIter pti(* this, lev); pti.isValid(); ++pti) {
 
-        TileIndex index(pti.index(), pti.LocalTileIndex());
-        AoS & particles = this->GetParticles(lev).at(index).GetArrayOfStructs();
-        long np = this->GetParticles(lev).at(index).numParticles();
+        PairIndex index(pti.index(), pti.LocalTileIndex());
+        const int np = this->GetParticles(lev)[index].numRealParticles();
+        auto& plev = this->GetParticles(lev);
+        auto& ptile = plev[index];
+        auto& aos   = ptile.GetArrayOfStructs();
+        ParticleType* particles = aos().dataPtr();
 
-        int id;
         if (element >= 0) {
 
             AMREX_FOR_1D( np, i,
             {
                 ParticleType & part = particles[i];
-                id = part.id();
+                int id = part.id();
                 //std::cout << id << " of " << totalParticles << std::endl;
                 list[id-1] = particles[i].idata(StructInt::sorted + element);
             });
@@ -343,17 +352,19 @@ void IBMarkerContainerBase<StructReal, StructInt>::PushUpAdd(
 
     for (MyIBMarIter pti(* this, lev); pti.isValid(); ++pti) {
 
-        TileIndex index(pti.index(), pti.LocalTileIndex());
-        AoS & particles = this->GetParticles(lev).at(index).GetArrayOfStructs();
-        long np = this->GetParticles(lev).at(index).numParticles();
+        PairIndex index(pti.index(), pti.LocalTileIndex());
+        const int np = this->GetParticles(lev)[index].numRealParticles();
+        auto& plev = this->GetParticles(lev);
+        auto& ptile = plev[index];
+        auto& aos   = ptile.GetArrayOfStructs();
+        ParticleType* particles = aos().dataPtr();
 
-        int id;
         if(element >= 0) {
 
             AMREX_FOR_1D( np, i,
             {
                 ParticleType & part = particles[i];
-                id = part.id();
+                int id = part.id();
 
                 particles[i].rdata(StructReal::radius + element) = particles[i].rdata(StructReal::radius + element) + list[id-1];
             });
@@ -363,7 +374,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::PushUpAdd(
             AMREX_FOR_1D( np, i,
             { 
                 ParticleType & part = particles[i];
-                id = part.id();
+                int id = part.id();
 
                 particles[i].pos((-element)-1) = particles[i].pos((-element)-1) + list[id-1];
             });
@@ -378,11 +389,13 @@ void IBMarkerContainerBase<StructReal, StructInt>::ResetMarkers(int lev) {
 
     for (MyIBMarIter pti(* this, lev); pti.isValid(); ++pti) {
 
-        TileIndex index(pti.index(), pti.LocalTileIndex());
-        auto & particle_data = this->GetParticles(lev).at(index);
-        long np = this->GetParticles(lev).at(index).numParticles();
+        PairIndex index(pti.index(), pti.LocalTileIndex());
+        const int np = this->GetParticles(lev)[index].numRealParticles();
+        auto& plev = this->GetParticles(lev);
+        auto& ptile = plev[index];
+        auto& aos   = ptile.GetArrayOfStructs();
+        ParticleType* particles = aos().dataPtr();
 
-        AoS & particles = particle_data.GetArrayOfStructs();
         AMREX_FOR_1D( np, i,
         {
             ParticleType & part = particles[i];
