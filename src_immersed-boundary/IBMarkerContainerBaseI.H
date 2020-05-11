@@ -225,23 +225,25 @@ void IBMarkerContainerBase<StructReal, StructInt>::PullDown(
 
         if (element >= 0) {
 
-            for (int i = 0; i < np; ++i) {
+            AMREX_FOR_1D( np, i,
+            {
                 ParticleType & part = particles[i];
                 id = part.id();
                 //std::cout << id << " of " << totalParticles << std::endl;
                 list[id-1] = particles[i].rdata(StructReal::radius + element);
-            }
+            });
 
         } else {
 
-            for (int i = 0; i < np; ++i) {
+            AMREX_FOR_1D( np, i,
+            {
                 ParticleType & part = particles[i];
                 id = part.id();
                 list[id-1] = part.pos((-element)-1);
 
               //  std::cout << "Proc " << ParallelDescriptor::MyProc() << " storing " << part.pos((-element)-1)
                 //                               << " from " << i << " in position " << id-1 << std::endl;
-            }
+            });
         }
     }
 
@@ -284,12 +286,13 @@ void IBMarkerContainerBase<StructReal, StructInt>::PullDownInt(
         int id;
         if (element >= 0) {
 
-            for (int i = 0; i < np; ++i) {
+            AMREX_FOR_1D( np, i,
+            {
                 ParticleType & part = particles[i];
                 id = part.id();
                 //std::cout << id << " of " << totalParticles << std::endl;
                 list[id-1] = particles[i].idata(StructInt::sorted + element);
-            }
+            });
 
         } 
     }
@@ -347,21 +350,23 @@ void IBMarkerContainerBase<StructReal, StructInt>::PushUpAdd(
         int id;
         if(element >= 0) {
 
-            for (int i = 0; i < np; ++i) {
+            AMREX_FOR_1D( np, i,
+            {
                 ParticleType & part = particles[i];
                 id = part.id();
 
                 particles[i].rdata(StructReal::radius + element) = particles[i].rdata(StructReal::radius + element) + list[id-1];
-            }
+            });
 
         } else {
 
-            for (int i = 0; i < np; ++i) {
+            AMREX_FOR_1D( np, i,
+            { 
                 ParticleType & part = particles[i];
                 id = part.id();
 
                 particles[i].pos((-element)-1) = particles[i].pos((-element)-1) + list[id-1];
-            }
+            });
         }
     }
 }
@@ -378,14 +383,15 @@ void IBMarkerContainerBase<StructReal, StructInt>::ResetMarkers(int lev) {
         long np = this->GetParticles(lev).at(index).numParticles();
 
         AoS & particles = particle_data.GetArrayOfStructs();
-        for (int i = 0; i < np; ++i) {
+        AMREX_FOR_1D( np, i,
+        {
             ParticleType & part = particles[i];
 
             for (int d=0; d<AMREX_SPACEDIM; ++d) {
                 part.rdata(StructReal::velx + d)   = 0.;
                 part.rdata(StructReal::forcex + d) = 0.;
             }
-        }
+        });
     }
 }
 
