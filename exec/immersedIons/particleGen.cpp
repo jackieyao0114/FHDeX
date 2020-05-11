@@ -9,6 +9,15 @@ void FhdParticleContainer::InitParticles(species* particleInfo, const Real* dxp)
 
     int pcount = 0;
 
+    Real specSpacing[nspecies];
+    int specCountX[nspecies];
+    int specCountY[nspecies];
+#if (BL_SPACEDIM == 3)
+    int specCountZ[nspecies];
+#endif
+    Real offset = 1.0/(double)(nspecies);
+
+
     bool proc0_enter = true;
         
     for (MFIter mfi = MakeMFIter(lev, true); mfi.isValid(); ++mfi) {
@@ -28,17 +37,74 @@ void FhdParticleContainer::InitParticles(species* particleInfo, const Real* dxp)
             proc0_enter = false;
             
             for(int i_spec=0; i_spec < nspecies; i_spec++) {
+
+                specSpacing[i_spec] = pow(1.0/particleInfo[i_spec].n0, 0.333333);
+
+                specCountX[i_spec] = (int)floor((prob_hi[0]-prob_lo[0])/specSpacing[i_spec]);
+                specCountY[i_spec] = (int)floor((prob_hi[1]-prob_lo[1])/specSpacing[i_spec]);
+#if (BL_SPACEDIM == 3)
+                specCountZ[i_spec] = (int)floor((prob_hi[2]-prob_lo[2])/specSpacing[i_spec]);
+#endif                
+
+                Print() << specSpacing[i_spec] << "\n";
+
+                int ii = 0;
+                int jj = 0;
+#if (BL_SPACEDIM == 3)
+                int kk = 0;
+#endif
+
                 for (int i_part=0; i_part<particleInfo[i_spec].total;i_part++) {
                     ParticleType p;
                     p.id()  = ParticleType::NextID();
                     p.cpu() = ParallelDescriptor::MyProc();
                     p.idata(FHD_intData::sorted) = 0;
-                
-                    p.pos(0) = prob_lo[0] + get_uniform_func()*(prob_hi[0]-prob_lo[0]);
-                    p.pos(1) = prob_lo[1] + get_uniform_func()*(prob_hi[1]-prob_lo[1]);
+                    if(particle_placement ==  1)
+                    {
+
+                        p.pos(0) = prob_lo[0] + (ii+offset*(i_spec+0.5))*specSpacing[i_spec];
+                        p.pos(1) = prob_lo[1] + (jj+offset*(i_spec+0.5))*specSpacing[i_spec];
 #if (BL_SPACEDIM == 3)
-                    p.pos(2) = prob_lo[2] + get_uniform_func()*(prob_hi[2]-prob_lo[2]);
+                        p.pos(2) = prob_lo[2] + (kk+offset*(i_spec+0.5))*specSpacing[i_spec];
 #endif
+
+//                        p.pos(0) = prob_lo[0] + ii*specSpacing[i_spec];
+//                        p.pos(1) = prob_lo[1] + jj*specSpacing[i_spec];
+//#if (BL_SPACEDIM == 3)
+//                        p.pos(2) = prob_lo[2] + kk*specSpacing[i_spec];
+//#endif
+                        Print() << p.pos(0) << ", " << p.pos(1) << ", " << p.pos(2) << "\n";
+                        Print() << ii << ", " << jj << ", " << kk << "\n";
+
+                        ii++;
+                        if(ii == specCountX[i_spec])
+                        {
+                            ii = 0;
+                            jj++;
+
+                            if(jj == specCountY[i_spec])
+                            { 
+                                jj=0;
+#if (BL_SPACEDIM == 3)
+                                kk++;
+
+                                if(kk == specCountZ[i_spec])
+                                {
+                                    kk=0;
+                                }
+#endif
+                            }
+                        }
+
+
+                    }else
+                    {
+                        p.pos(0) = prob_lo[0] + amrex::Random()*(prob_hi[0]-prob_lo[0]);
+                        p.pos(1) = prob_lo[1] + amrex::Random()*(prob_hi[1]-prob_lo[1]);
+#if (BL_SPACEDIM == 3)
+                        p.pos(2) = prob_lo[2] + amrex::Random()*(prob_hi[2]-prob_lo[2]);
+#endif
+                    }
 
 //                    p.pos(0) = prob_lo[0] + 0.25*(prob_hi[0]-prob_lo[0]);
 //                    p.pos(1) = prob_lo[1] + 0.25*(prob_hi[1]-prob_lo[1]);
