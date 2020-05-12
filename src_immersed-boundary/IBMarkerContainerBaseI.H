@@ -84,8 +84,10 @@ template <typename StructReal, typename StructInt>
 void IBMarkerContainerBase<StructReal, StructInt>::RFD(
             int lev, const Real * dx,
                   std::array<MultiFab, AMREX_SPACEDIM> & f_out,
-            const std::array<MultiFab, AMREX_SPACEDIM> & coords
-        ) {
+            const std::array<MultiFab, AMREX_SPACEDIM> & coords) 
+{
+    // timer for profiling
+    BL_PROFILE_VAR("RFD()",RFD);
 
     Real delta = 1e-4*dx[0];
     Real deltaover2 = delta/2.0;
@@ -208,8 +210,10 @@ void IBMarkerContainerBase<StructReal, StructInt>::MovePredictor(int lev, Real d
 
 template <typename StructReal, typename StructInt>
 void IBMarkerContainerBase<StructReal, StructInt>::PullDown(
-            int lev, Real * list, int element, int totalParticles
-        ) {
+            int lev, Real * list, int element, int totalParticles) 
+{
+    // timer for profiling
+    BL_PROFILE_VAR("PullDown()",PullDown);
 
     Real temp;
 
@@ -273,8 +277,10 @@ void IBMarkerContainerBase<StructReal, StructInt>::PullDown(
 
 template <typename StructReal, typename StructInt>
 void IBMarkerContainerBase<StructReal, StructInt>::PullDownInt(
-            int lev, int * list, int element, int totalParticles
-        ) {
+            int lev, int * list, int element, int totalParticles) 
+{
+    // timer for profiling
+    BL_PROFILE_VAR("PullDownInt()",PullDownInt);
 
     int temp;
 
@@ -327,9 +333,10 @@ void IBMarkerContainerBase<StructReal, StructInt>::PullDownInt(
 
 template <typename StructReal, typename StructInt>
 void IBMarkerContainerBase<StructReal, StructInt>::PushUpAdd(
-            int lev, Real * list, int element, int totalParticles
-        ) {
-
+            int lev, Real * list, int element, int totalParticles) 
+{
+    // timer for profiling
+    BL_PROFILE_VAR("PushUpAdd()",PushUpAdd);
 
     Real temp;
 
@@ -385,7 +392,10 @@ void IBMarkerContainerBase<StructReal, StructInt>::PushUpAdd(
 
 
 template <typename StructReal, typename StructInt>
-void IBMarkerContainerBase<StructReal, StructInt>::ResetMarkers(int lev) {
+void IBMarkerContainerBase<StructReal, StructInt>::ResetMarkers(int lev) 
+{
+    // timer for profiling
+    BL_PROFILE_VAR("ResetMarkers()",ResetMarkers);
 
     for (MyIBMarIter pti(* this, lev); pti.isValid(); ++pti) {
 
@@ -502,8 +512,10 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadMarkers(
                   std::array<      FArrayBox *, AMREX_SPACEDIM> & f_out,
                   std::array<      FArrayBox *, AMREX_SPACEDIM> & f_weights,
             const std::array<const FArrayBox *, AMREX_SPACEDIM> & coords,
-            const Real* dx, int ghost
-        ) {
+            const Real* dx, int ghost) 
+{
+    // timer for profiling
+    BL_PROFILE_VAR("SpreadMarkers()",SpreadMarkers);
 
     const int n_marker = f_pos.size();
 
@@ -758,6 +770,8 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx,
          const Real* dx, 
          int* nghost)  
 {
+    // timer for profiling
+    BL_PROFILE_VAR("SpreadKernel()",SpreadKernel);
 
     int ilo, ihi, jlo, jhi, klo, khi, gs;
 
@@ -1118,8 +1132,10 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateMarkers(
             const std::array<const FArrayBox *, AMREX_SPACEDIM> & f_in,
             const std::array<const FArrayBox *, AMREX_SPACEDIM> & f_weights,
             const std::array<const FArrayBox *, AMREX_SPACEDIM> & coords,
-            const Real * dx, const int ghost
-        ){
+            const Real * dx, const int ghost)
+{
+    // timer for profiling
+    BL_PROFILE_VAR("InterpolateMarkers()",InterpolateMarkers);
 
     const int n_marker = f_pos.size();
 
@@ -1191,6 +1207,8 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& 
          const Real* dx, 
          const int* nghost)  
 {
+    // timer for profiling
+    BL_PROFILE_VAR("InterpolateKernel()",InterpolateKernel);
 
     int ilo, ihi, jlo, jhi, klo, khi, gs;
 
@@ -1200,7 +1218,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& 
     }
     else if (pkernel_fluid == 4)
     {
-        gs = 4;
+        gs = 3;
     }
     else 
     {
