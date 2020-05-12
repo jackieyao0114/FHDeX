@@ -412,6 +412,11 @@ void FhdParticleContainer::MoveIons2(const Real dt, const Real* dxFluid, const R
     Real  maxdist_tile = 0.,  maxdist_proc = 0.; // max displacement (fraction of radius)
     Real diffinst_tile = 0., diffinst_proc = 0.; // average diffusion coefficient
 
+
+    InterpolateMarkers(0, dx, umac, RealFaceCoords);
+
+
+
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
