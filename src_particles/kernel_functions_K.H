@@ -3,9 +3,11 @@
 
 #include <AMReX.H>
 
-AMREX_GPU_HOST_DEVICE AMREX_INLINE    
-Real kernel_3p (Real r_in)
+struct Kernel3P
 {
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE    
+    Real operator() (Real r_in) const noexcept
+    {
     Real kernel_3p;
 
     //internal variables
@@ -32,11 +34,14 @@ Real kernel_3p (Real r_in)
     }
 
     return kernel_3p;
-}
+    }
+};
 
-AMREX_GPU_HOST_DEVICE AMREX_INLINE
-Real kernel_4p(Real r_in)
+struct Kernel4P
 {
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    Real operator() (Real r_in) const noexcept
+    {
     Real kernel_4p;
 
     Real r2 = r_in*r_in;
@@ -67,7 +72,8 @@ Real kernel_4p(Real r_in)
     }
 
     return kernel_4p;
-}
+    }
+};
 
 AMREX_GPU_HOST_DEVICE AMREX_INLINE
 Real beta_kernel (Real r)
@@ -121,8 +127,10 @@ Real phi1 (Real r)
     return phi1;
 }
 
-AMREX_GPU_HOST_DEVICE AMREX_INLINE
-Real kernel_6p (Real r_in)
+struct Kernel6P
+{
+    AMREX_GPU_HOST_DEVICE AMREX_INLINE
+    Real operator() (Real r_in) const noexcept
 {
     //The 6-point kernel function, based on the paper:
     //>*A Gaussian-like immersed-boundary kernel with three continuous derivatives and improved translational invariance*
@@ -188,5 +196,6 @@ Real kernel_6p (Real r_in)
 
     return kernel_6p;
 }
+};
 
 #endif

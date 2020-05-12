@@ -580,6 +580,140 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadMarkers(
    }
 }
 
+AMREX_GPU_HOST_DEVICE AMREX_INLINE    
+Real kernel_3p (Real r_in)
+{
+    Real kernel_3p;
+
+    //internal variables
+    Real r;
+    Real r1;
+    Real r2;
+ 
+    //initialize r
+    r = r_in;
+    r1 = std::abs(r_in);
+    r2 = r1*r1;
+
+    if (r1 <= 0.5)
+    {
+       kernel_3p = (1+std::sqrt(1-(3*r2)))/3.0;
+    }
+    else if (r1 <= 1.5)
+    {
+       kernel_3p = (5.0-(3.0*r1)-std::sqrt(-3*(1-r1)*(1-r1)+1))/6.0;
+    }
+    else
+    {
+       kernel_3p = 0.0;
+    }
+
+    return kernel_3p;
+}
+
+AMREX_GPU_HOST_DEVICE AMREX_INLINE
+Real kernel_4p(Real r_in)
+{
+    Real kernel_4p;
+
+    Real r2 = r_in*r_in;
+
+    if (r_in <= -2)
+    {
+       kernel_4p = 0.0;
+    }
+    else if (r_in <= -1)
+    {
+       kernel_4p = 0.125*(5.0 + (2.0*r_in) - std::sqrt(-7.0-(12.0*r_in) - (4.0*r2)));
+    }
+    else if (r_in <= 0)
+    {
+       kernel_4p = 0.125*(3.0 + (2.0*r_in) + std::sqrt(1.0 - (4.0*r_in) - (4.0*r2)));
+    }
+    else if (r_in <= 1)
+    {
+       kernel_4p = 0.125*(3.0 - (2.0*r_in) + std::sqrt(1.0 + (4.0*r_in) - (4.0*r2)));
+    }
+    else if (r_in <= 2)
+    {
+       kernel_4p = 0.125*(5.0 - (2.0*r_in) - std::sqrt(-7.0 + (12.0*r_in) - (4.0*r2)));
+    }
+    else
+    {
+       kernel_4p = 0.0;
+    }
+
+    return kernel_4p;
+}
+
+AMREX_GPU_HOST_DEVICE AMREX_INLINE
+Real kernel_6p (Real r_in)
+{
+    //The 6-point kernel function, based on the paper:
+    //>*A Gaussian-like immersed-boundary kernel with three continuous derivatives and improved translational invariance*
+    //>Yuanxun Bao, Jason Kaye, Charles S. Peskin, *Journal of Computational Physics* **316**, 139 (2016)
+    //>https://dx.doi.org/10.1016/j.jcp.2016.04.024
+    //Note also: https://github.com/stochasticHydroTools/IBMethod/blob/master/IBKernels/Kernels.c because the paper above has mistakes (but the repo's OK)
+
+    Real kernel_6p;
+
+    //internal parameters
+    Real K = 59.0/60 - std::sqrt(29.0)/20.0;
+    Real sgn = (3.0/2 - K)/std::abs(3.0/2 - K);
+
+    //pre-computed ratios
+    Real inv16 = 1.0/16.0;
+    Real inv8 = 1.0/8.0;
+    Real inv12 = 1.0/12.0;
+    Real inv4 = 1.0/4.0;
+    Real inv6 = 1.0/6.0;
+    Real rat58 = 5.0/8.0;
+
+    //internal variables
+    Real r = r_in;
+
+    //compute kernel function
+    if (r <= -3)
+    {
+       kernel_6p = 0.0; 
+    }
+    else if (r <= -2)
+    {
+       r += 3;
+       kernel_6p = phi1(r);
+    }
+    else if (r <= -1)
+    {
+       r += 2;
+       kernel_6p = -3*phi1(r) - inv16 + inv8*(K+(r*r)) + inv12*((3*K-1)*r+(r*r*r));
+    }
+    else if (r <= 0)
+    {
+       r += 1;
+       kernel_6p = 2*phi1(r) + inv4 + inv6*((4-3*K)*r-(r*r*r));
+    }
+    else if (r <= 1)
+    {
+       kernel_6p = 2*phi1(r) + rat58 - inv4*(K+(r*r));
+    }
+    else if (r <= 2)
+    {
+       r -= 1;
+       kernel_6p = -3*phi1(r) + inv4 - inv6*((4-3*K)*r-(r*r*r));
+    }
+    else if (r <= 3)
+    {
+       r -= 2;
+       kernel_6p = phi1(r) - inv16 + inv8*(K+(r*r)) - inv12*((3*K-1)*r+(r*r*r));
+    }
+    else
+    {
+       kernel_6p = 0.0;
+    }
+
+    return kernel_6p;
+}
+
 template <typename StructReal, typename StructInt>
 void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx, 
          std::array<     FArrayBox *, AMREX_SPACEDIM> & f_out, 

@@ -641,17 +641,17 @@ void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab,
     if (common::pkernel_es == 3)
     {
         constexpr int ks = 2;
-        collect_charge<ks>(aos, fab, kernel_3p, plo, dx, ploes, dxes, dt); 
+        collect_charge<ks>(aos, fab, Kernel3P(), plo, dx, ploes, dxes, dt); 
     }
     else if (common::pkernel_es == 4)
     {
         constexpr int ks = 3;
-        collect_charge<ks>(aos, fab, kernel_4p, plo, dx, ploes, dxes, dt); 
+        collect_charge<ks>(aos, fab, Kernel4P(), plo, dx, ploes, dxes, dt); 
     }
     else if (common::pkernel_es == 6)
     {
         constexpr int ks = 4;
-        collect_charge<ks>(aos, fab, kernel_6p, plo, dx, ploes, dxes, dt); 
+        collect_charge<ks>(aos, fab, Kernel6P(), plo, dx, ploes, dxes, dt); 
     }
 }
 
