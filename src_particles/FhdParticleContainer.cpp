@@ -1321,18 +1321,9 @@ void FhdParticleContainer::collectFields(const Real dt, const Real* dxPotential,
         auto& particle_tile = GetParticles(lev)[std::make_pair(grid_id,tile_id)];
         auto& particles = particle_tile.GetArrayOfStructs();
         const int np = particles.numParticles();
-        
-        collect_charge(particles.data(), &np,
-                         ARLIM_3D(tile_box.loVect()),
-                         ARLIM_3D(tile_box.hiVect()),
-                         m_vector_ptrs[grid_id].dataPtr(),
-                         m_vector_size[grid_id].dataPtr(),
-                         ARLIM_3D(m_vector_ptrs[grid_id].loVect()),
-                         ARLIM_3D(m_vector_ptrs[grid_id].hiVect()),
-                         ZFILL(plo), ZFILL(phi), ZFILL(dx), &dt, ZFILL(geomP.ProbLo()), ZFILL(dxPotential),
-                         BL_TO_FORTRAN_3D(RealCenterCoords[pti]),
-                         BL_TO_FORTRAN_3D(chargeTemp[pti]));
 
+        collect_charge(particles, chargeTemp[pti],
+                       ZFILL(plo), ZFILL(dx), ZFILL(geomP.ProbLo()), ZFILL(dxPotential), dt);
     }
 
     MultiFabPhysBCCharge(chargeTemp, geomP);

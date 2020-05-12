@@ -4,6 +4,7 @@
 #include <AMReX.H>
 #include <FhdParticleContainer.H>
 #include <common_namespace.H>
+#include <kernel_functions_K.H>
 
 /**
    Check if particle is near a boundary. Assumes boundary is parallel to either xy, zx, yz, plane
@@ -545,6 +546,113 @@ void compute_forces_nl (FhdParticleContainer::AoS& aos, int Np, int Nn,
     });
 
     rcount = std::min(rcount, rcount_d.dataValue());
+}
+
+template <int ks, typename F>
+void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab, F f,
+                     const amrex::Real* plo_in, const amrex::Real* dx_in,
+                     const amrex::Real* ploes_in, const amrex::Real* dxes_in, amrex::Real dt)
+{
+    using namespace amrex;
+
+    GpuArray<Real, 3> plo = {plo_in[0], plo_in[1], plo_in[2]};
+    GpuArray<Real, 3> dx  = {dx_in[0],  dx_in[1],  dx_in[2] };
+
+    GpuArray<Real, 3> ploes = {ploes_in[0], ploes_in[1], ploes_in[2]};
+    GpuArray<Real, 3> dxes  = {dxes_in[0],  dxes_in[1],  dxes_in[2] };    
+
+    GpuArray<Real, 3> dxi   = {1.0/dx_in[0]  ,  1.0/dx_in[1]  ,  1.0/dx_in[2]   };
+    GpuArray<Real, 3> dxesi = {1.0/dxes_in[0],  1.0/dxes_in[1],  1.0/dxes_in[2] };
+
+    Real volinv = 1.0/(dxes_in[0]*dxes_in[1]*dxes_in[2]);
+    Real permittivity = common::permittivity;
+    
+    const auto Np = aos.numParticles();
+    const auto pstruct = aos().dataPtr();
+
+    auto arr = fab.array();
+    
+    AMREX_FOR_1D( Np, ip, 
+    {
+        FhdParticleContainer::ParticleType& p = pstruct[ip];
+
+        Real fr[3];
+        fr[0] = (p.pos(0) - ploes[0]) * dxesi[0];
+        fr[1] = (p.pos(1) - ploes[1]) * dxesi[1];
+        fr[2] = (p.pos(2) - ploes[2]) * dxesi[2];
+
+        int fi[3];
+        fi[0] = std::floor(fr[0]);
+        fi[1] = std::floor(fr[1]);
+        fi[2] = std::floor(fr[2]);
+
+        Real fd[3];
+        fd[0] = fr[0] - fi[0];
+        fd[1] = fr[1] - fi[1];
+        fd[2] = fr[2] - fi[2];
+
+        int fn[3];
+        fn[0] = (fd[0] < 0.5) ? -1 : 0;
+        fn[1] = (fd[1] < 0.5) ? -1 : 0;
+        fn[2] = (fd[2] < 0.5) ? -1 : 0;
+            
+        int wcount;
+        Real wcheck;
+
+        Real qm = p.rdata(FHD_realData::q)/permittivity;
+
+        Real wx[2*ks];
+        for (int i = 0 ; i < 2*ks; ++i)
+        {
+            Real xx = p.pos(0) - (fi[0] + i - (ks-1) + fn[0] + 0.5)*dxes[0] + ploes[0];
+            wx[i] = f(xx*dxesi[0]);
+        }
+        
+        Real wy[2*ks];
+        for (int i = 0 ; i < 2*ks; ++i)
+        {
+            Real yy = p.pos(1) - (fi[1] + i - (ks-1) + fn[1] + 0.5)*dxes[1] + ploes[1];
+            wy[i] = f(yy*dxesi[1]);
+        }
+
+        Real wz[2*ks];
+        for (int i = 0 ; i < 2*ks; ++i)
+        {
+            Real zz = p.pos(2) - (fi[2] + i - (ks-1) + fn[2] + 0.5)*dxes[2] + ploes[2];
+            wz[i] = f(zz*dxesi[2]);
+        }
+
+        for (int k = 0 ; k < 2*ks; ++k) {
+            for (int j = 0 ; j < 2*ks; ++j) {
+                for (int i = 0 ; i < 2*ks; ++i) {
+                    arr(fi[0] + i - (ks-1) + fn[0],
+                        fi[1] + j - (ks-1) + fn[1],
+                        fi[2] + k - (ks-1) + fn[2]) += qm*wx[i]*wy[j]*wz[k]*volinv;
+                }
+            }
+        }
+    });
+}
+
+void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab,
+                     const amrex::Real* plo, const amrex::Real* dx,
+                     const amrex::Real* ploes, const amrex::Real* dxes, amrex::Real dt)
+{
+    if (common::pkernel_es == 3)
+    {
+        constexpr int ks = 2;
+        collect_charge<ks>(aos, fab, kernel_3p, plo, dx, ploes, dxes, dt); 
+    }
+    else if (common::pkernel_es == 4)
+    {
+        constexpr int ks = 3;
+        collect_charge<ks>(aos, fab, kernel_4p, plo, dx, ploes, dxes, dt); 
+    }
+    else if (common::pkernel_es == 6)
+    {
+        constexpr int ks = 4;
+        collect_charge<ks>(aos, fab, kernel_6p, plo, dx, ploes, dxes, dt); 
+    }
 }
 
 #endif
