@@ -572,9 +572,9 @@ void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab, F f,
 
     auto arr = fab.array();
     
-    AMREX_FOR_1D( Np, i, 
+    AMREX_FOR_1D( Np, ip, 
     {
-        FhdParticleContainer::ParticleType& p = pstruct[i];
+        FhdParticleContainer::ParticleType& p = pstruct[ip];
 
         Real fr[3];
         fr[0] = (p.pos(0) - ploes[0]) * dxesi[0];
@@ -600,39 +600,38 @@ void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab, F f,
         Real wcheck;
 
         Real qm = p.rdata(FHD_realData::q)/permittivity;
-        
+
         Real wx[2*ks];
         for (int i = 0 ; i < 2*ks; ++i)
         {
-            Real xx = p.pos(0) - (fi[0] + i + fn[0])*dxes[0] + ploes[0];
+            Real xx = p.pos(0) - (fi[0] + i - (ks-1) + fn[0] + 0.5)*dxes[0] + ploes[0];
             wx[i] = f(xx*dxesi[0]);
         }
         
         Real wy[2*ks];
         for (int i = 0 ; i < 2*ks; ++i)
         {
-            Real yy = p.pos(1) - (fi[1] + i + fn[1])*dx[1] + ploes[1];
+            Real yy = p.pos(1) - (fi[1] + i - (ks-1) + fn[1] + 0.5)*dxes[1] + ploes[1];
             wy[i] = f(yy*dxesi[1]);
         }
 
         Real wz[2*ks];
         for (int i = 0 ; i < 2*ks; ++i)
         {
-            Real zz = p.pos(2) - (fi[2] + i + fn[2])*dx[2] + ploes[2];
+            Real zz = p.pos(2) - (fi[2] + i - (ks-1) + fn[2] + 0.5)*dxes[2] + ploes[2];
             wz[i] = f(zz*dxesi[2]);
         }
 
         for (int k = 0 ; k < 2*ks; ++k) {
             for (int j = 0 ; j < 2*ks; ++j) {
                 for (int i = 0 ; i < 2*ks; ++i) {
-                    arr(fi[0] + i + fn[0],
-                        fi[1] + j + fn[1],
-                        fi[2] + k + fn[2]) = qm*wx[i]*wy[j]*wz[k]*volinv;
+                    arr(fi[0] + i - (ks-1) + fn[0],
+                        fi[1] + j - (ks-1) + fn[1],
+                        fi[2] + k - (ks-1) + fn[2]) += qm*wx[i]*wy[j]*wz[k]*volinv;
                 }
             }
         }
     });
-    
 }
 
 void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab,
@@ -649,7 +648,7 @@ void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab,
         constexpr int ks = 3;
         collect_charge<ks>(aos, fab, kernel_4p, plo, dx, ploes, dxes, dt); 
     }
-    else if (common::pkernel_es == 4)
+    else if (common::pkernel_es == 6)
     {
         constexpr int ks = 4;
         collect_charge<ks>(aos, fab, kernel_6p, plo, dx, ploes, dxes, dt); 
