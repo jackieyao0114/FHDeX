@@ -8,8 +8,8 @@ amrex::IntVect                common::nodal_flag_xy;
 amrex::IntVect                common::nodal_flag_xz;
 amrex::IntVect                common::nodal_flag_yz;
 
-amrex::Vector<amrex::Real> common::prob_lo;
-amrex::Vector<amrex::Real> common::prob_hi;
+AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> common::prob_lo;
+AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> common::prob_hi;
 amrex::Vector<int>         common::n_cells;
 amrex::Vector<int>         common::max_grid_size;
 amrex::Vector<int>         common::max_particle_tile_size;

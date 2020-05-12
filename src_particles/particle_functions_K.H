@@ -20,7 +20,8 @@ int near_wall_check (const FhdParticleContainer::ParticleType& part, int dir)
 {
     using namespace amrex;
     using common::prob_hi;
-
+    using common::prob_lo;
+    
     const int abs_dir = std::abs(dir);
     const Real p3m_rad = part.rdata(FHD_realData::p3m_radius);
     const int index = abs_dir - 1;
@@ -62,7 +63,8 @@ int near_wall_check (const FhdParticleContainer::ParticleType& part, int dir)
           abs(dir) > 0 means reflect part pos across plane of x(dir) = prob_hi(dir)
                    < 0 means reflect part pos across plane of x(dir) = prob_lo(dir)
 */
-amrex::RealVect calc_im_charge_loc (const FhdParticleContainer::ParticleType& part, int dir)
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+amrex::RealVect calc_im_charge_loc (const FhdParticleContainer::ParticleType& part, int dir) noexcept
 {
     using namespace amrex;
     using common::prob_lo;
@@ -263,8 +265,8 @@ void compute_p3m_sr_correction_nl (FhdParticleContainer::AoS& aos, int Np, int N
 
     auto p_bc_es_lo_d = bc_es_lo_d.data();
     auto p_bc_es_hi_d = bc_es_hi_d.data();
-    
-    for (int i = 0; i < Np; ++i) 
+
+    AMREX_FOR_1D( Np, i, 
     {
         FhdParticleContainer::ParticleType& p1 = pstruct[i];
 
@@ -496,7 +498,7 @@ void compute_p3m_sr_correction_nl (FhdParticleContainer::AoS& aos, int Np, int N
                 }                
             }
         }
-    }
+    });
 
     rcount = std::min(rcount, rcount_d.dataValue());    
 }

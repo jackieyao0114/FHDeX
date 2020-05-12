@@ -14,8 +14,8 @@ namespace common {
     // Below are items that are read in from the common namelist
 
     // Problem specification
-    extern amrex::Vector<amrex::Real> prob_lo;              // physical lo coordinate
-    extern amrex::Vector<amrex::Real> prob_hi;              // physical hi coordinate
+    extern AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> prob_lo; // physical lo coordinate
+    extern AMREX_GPU_MANAGED amrex::GpuArray<amrex::Real, 3> prob_hi; // physical hi coordinate
     extern amrex::Vector<int>         n_cells;              // number of cells in domain
     extern amrex::Vector<int>         max_grid_size;        // max number of cells in a box
     extern amrex::Vector<int>         max_particle_tile_size;        // max number of cells in a box
