@@ -110,8 +110,8 @@ public:
                       std::array<      FArrayBox *, AMREX_SPACEDIM> & f_out,
                       std::array<      FArrayBox *, AMREX_SPACEDIM> & f_weights,
                       const std::array<const FArrayBox *, AMREX_SPACEDIM> & coords,
-                      const Real* pos, 
-                      const Real* v_spread,
+                      GpuArray<Real, AMREX_SPACEDIM>const& pos, 
+                      GpuArray<Real, AMREX_SPACEDIM>const& v_spread,
                       const Real* dx, 
                       int* nghost);
     //---------------------------------------------------------------------------
@@ -159,12 +159,20 @@ public:
                       const std::array<const FArrayBox *, AMREX_SPACEDIM> & f_in,
                       const std::array<const FArrayBox *, AMREX_SPACEDIM> & f_weights,
                       const std::array<const FArrayBox *, AMREX_SPACEDIM> & coords,
-                      const Real* pos,
-                      Real* v_spread,
+                      GpuArray<Real, AMREX_SPACEDIM>const& pos,
+                      Gpu::ManagedDeviceVector<Real>& v_spread,
                       const Real* dx,
                       const int* nghost);
     //---------------------------------------------------------------------------
 
+
+
+    void InterpolateMarkers(
+            int lev,
+            const Real * dx,
+            const std::array<MultiFab, AMREX_SPACEDIM> & f_in,
+            const std::array<MultiFab, AMREX_SPACEDIM> & coords
+        );
 
 
     //___________________________________________________________________________

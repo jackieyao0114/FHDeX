@@ -13,6 +13,7 @@ using namespace amrex;
 // in MultiFabFillRandom.cpp
 
 void MultiFabFillRandom(MultiFab& mf, const int& comp, const Real& variance, const Geometry& geom);
+//void FakeRandom();
 
 void MultiFabFillRandomHack(MultiFab& mf, const int& comp, const Real& variance, const Geometry& geom);
 
