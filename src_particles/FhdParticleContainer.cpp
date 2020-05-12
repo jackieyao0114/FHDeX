@@ -416,6 +416,36 @@ void FhdParticleContainer::MoveIons2(const Real dt, const Real* dxFluid, const R
     InterpolateMarkers(0, dx, umac, RealFaceCoords);
 
 
+    for (FhdParIter pti(*this, lev); pti.isValid(); ++pti)
+    {
+        const int grid_id = pti.index();
+        const int tile_id = pti.LocalTileIndex();
+        const Box& tile_box  = pti.tilebox();
+        
+        auto& particle_tile = GetParticles(lev)[std::make_pair(grid_id,tile_id)];
+        auto& particles = particle_tile.GetArrayOfStructs();
+        np_tile = particles.numParticles();
+
+ 
+
+        // gather statistics
+        np_proc       += np_tile;
+        rejected_proc += rejected_tile;
+        moves_proc    += moves_tile;
+        maxspeed_proc = std::max(maxspeed_proc, maxspeed_tile);
+        maxdist_proc  = std::max(maxdist_proc, maxdist_tile);
+        diffinst_proc += diffinst_tile;
+
+        // resize particle vectors after call to move_particles
+        for (IntVect iv = tile_box.smallEnd(); iv <= tile_box.bigEnd(); tile_box.next(iv))
+        {
+            const auto new_size = m_vector_size[grid_id](iv);
+            long imap = tile_box.index(iv);
+            auto& pvec = m_cell_vectors[grid_id][imap];
+            pvec.resize(new_size);
+        }
+    }
+
 
 #ifdef _OPENMP
 #pragma omp parallel
