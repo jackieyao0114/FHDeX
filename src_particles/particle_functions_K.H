@@ -625,9 +625,11 @@ void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab, F f,
         for (int k = 0 ; k < 2*ks; ++k) {
             for (int j = 0 ; j < 2*ks; ++j) {
                 for (int i = 0 ; i < 2*ks; ++i) {
-                    arr(fi[0] + i - (ks-1) + fn[0],
-                        fi[1] + j - (ks-1) + fn[1],
-                        fi[2] + k - (ks-1) + fn[2]) += qm*wx[i]*wy[j]*wz[k]*volinv;
+                    amrex::Gpu::Atomic::Add( 
+                                            &arr(fi[0] + i - (ks-1) + fn[0],
+                                                 fi[1] + j - (ks-1) + fn[1],
+                                                 fi[2] + k - (ks-1) + fn[2]),
+                                            qm*wx[i]*wy[j]*wz[k]*volinv);
                 }
             }
         }
