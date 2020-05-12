@@ -715,42 +715,46 @@ void FhdParticleContainer::SpreadIons(const Real dt, const Real* dxFluid, const 
 //}
 
 void FhdParticleContainer::RadialDistribution(long totalParticles, const int step, const species* particleInfo)
-{        
+{
+    // timer for profiling
+    BL_PROFILE_VAR("RadialDistribution()",RadialDistribution);
+        
     const int lev = 0;
-    int bin;
-    double domx, domy, domz, totalDist, temp;
+    Real domx, domy, domz, totalDist, temp;
 
     domx = (prob_hi[0] - prob_lo[0]);
     domy = (prob_hi[1] - prob_lo[1]);
     domz = (prob_hi[2] - prob_lo[2]);
 
-    Real posx[totalParticles];
-    Real posy[totalParticles];
-    Real posz[totalParticles];
-    int  species[totalParticles];
-    
-    Real charge[totalParticles];
+    GpuArray<Real, 3> p_prob_hi = {prob_hi[0],prob_hi[1],prob_hi[2]};
+    GpuArray<Real, 3> p_prob_lo = {prob_lo[0],prob_lo[1],prob_lo[2]}; 
+
+    Gpu::ManagedDeviceVector<Real> posx(totalParticles, 0.0);
+    Gpu::ManagedDeviceVector<Real> posy(totalParticles, 0.0);
+    Gpu::ManagedDeviceVector<Real> posz(totalParticles, 0.0);
+    Gpu::ManagedDeviceVector<int> species(totalParticles, 0.0);
+    Gpu::ManagedDeviceVector<Real> charge(totalParticles, 0.0);
 
     Print() << "Calculating radial distribution\n";
 
     // collect particle positions onto one processor
-    PullDown(0, posx, -1, totalParticles);
-    PullDown(0, posy, -2, totalParticles);
-    PullDown(0, posz, -3, totalParticles);
-    PullDown(0, charge, 27, totalParticles);
-    PullDownInt(0, species, 4, totalParticles);
+    PullDown(0, posx.dataPtr(), -1, totalParticles);
+    PullDown(0, posy.dataPtr(), -2, totalParticles);
+    PullDown(0, posz.dataPtr(), -3, totalParticles);
+    PullDown(0, charge.dataPtr(), 27, totalParticles);
+    PullDownInt(0, species.dataPtr(), 4, totalParticles);
     
     // outer radial extent
     totalDist = totalBins*binSize;
 
     // this is the bin "hit count"
-    RealVector radDist   (totalBins, 0.);
-    RealVector radDist_pp(totalBins, 0.);
-    RealVector radDist_pm(totalBins, 0.);
-    RealVector radDist_mm(totalBins, 0.);
+    Gpu::ManagedDeviceVector<Real> radDist(totalBins, 0.0);
+    Gpu::ManagedDeviceVector<Real> radDist_pp(totalBins, 0.0);
+    Gpu::ManagedDeviceVector<Real> radDist_pm(totalBins, 0.0);
+    Gpu::ManagedDeviceVector<Real> radDist_mm(totalBins, 0.0);
 
-    double nearest[totalParticles*(nspecies+1)];
-    double nn[nspecies*nspecies+1];
+    Gpu::ManagedDeviceVector<Real> nearest(totalParticles*(nspecies+1), 0.0);
+    Gpu::ManagedDeviceVector<Real> nn(nspecies*nspecies+1, 0.0);
 
     for(int k = 0; k < (nspecies+1)*totalParticles; k++)
     {
@@ -766,32 +770,44 @@ void FhdParticleContainer::RadialDistribution(long totalParticles, const int ste
 #pragma omp parallel
 #endif
     for (FhdParIter pti(*this, lev); pti.isValid(); ++pti) {
-            
-        const int grid_id = pti.index();
-        const int tile_id = pti.LocalTileIndex();
 
-        auto& particle_tile = GetParticles(lev)[std::make_pair(grid_id,tile_id)];
-        auto& particles = particle_tile.GetArrayOfStructs();
-        const int np = particles.numParticles();   
+        PairIndex index(pti.index(), pti.LocalTileIndex());
+        const int np = this->GetParticles(lev)[index].numRealParticles();
+        auto& plev = this->GetParticles(lev);
+        auto& ptile = plev[index];
+        auto& aos   = ptile.GetArrayOfStructs();
+        ParticleType* particles = aos().dataPtr();
+
+        auto posxPtr = posx.dataPtr();
+        auto posyPtr = posy.dataPtr();
+        auto poszPtr = posz.dataPtr();
+        auto speciesPtr = species.dataPtr();
+        auto chargePtr = charge.dataPtr();
+
+        auto radDistPtr = radDist.dataPtr();
+        auto radDist_ppPtr = radDist_pp.dataPtr();
+        auto radDist_pmPtr = radDist_pm.dataPtr();
+        auto radDist_mmPtr = radDist_mm.dataPtr();
+
+        auto nearestPtr = nearest.dataPtr();
 
         // loop over particles
-        for (int i = 0; i < np; ++i) {
+        AMREX_FOR_1D( np, i,
+        {
 
             ParticleType & part = particles[i];
 
-            int iilo = (part.pos(0)-searchDist <= prob_lo[0]) ? -1 : 0;
-            int iihi = (part.pos(0)+searchDist >= prob_hi[0]) ?  1 : 0;
+            int iilo = (part.pos(0)-searchDist <= p_prob_lo[0]) ? -1 : 0;
+            int iihi = (part.pos(0)+searchDist >= p_prob_hi[0]) ?  1 : 0;
 
-            int jjlo = (part.pos(1)-searchDist <= prob_lo[1]) ? -1 : 0;
-            int jjhi = (part.pos(1)+searchDist >= prob_hi[1]) ?  1 : 0;
+            int jjlo = (part.pos(1)-searchDist <= p_prob_lo[1]) ? -1 : 0;
+            int jjhi = (part.pos(1)+searchDist >= p_prob_hi[1]) ?  1 : 0;
 
-            int kklo = (part.pos(2)-searchDist <= prob_lo[2]) ? -1 : 0;
-            int kkhi = (part.pos(2)+searchDist >= prob_hi[2]) ?  1 : 0;
+            int kklo = (part.pos(2)-searchDist <= p_prob_lo[2]) ? -1 : 0;
+            int kkhi = (part.pos(2)+searchDist >= p_prob_hi[2]) ?  1 : 0;
                 
-            double rad, dx, dy, dz;
-
             int id = part.id() - 1;
-        
+             
             // loop over other particles
             for(int j = 0; j < totalParticles; j++) {
                 
@@ -801,45 +817,45 @@ void FhdParticleContainer::RadialDistribution(long totalParticles, const int ste
                 for(int kk = kklo; kk <= kkhi; kk++) {
 
                     // get distance between particles
-                    dx = part.pos(0)-posx[j] - ii*domx;
-                    dy = part.pos(1)-posy[j] - jj*domy;
-                    dz = part.pos(2)-posz[j] - kk*domz;
+                    Real dx = part.pos(0)-posxPtr[j] - ii*domx;
+                    Real dy = part.pos(1)-posyPtr[j] - jj*domy;
+                    Real dz = part.pos(2)-poszPtr[j] - kk*domz;
 
-                    int jSpec = species[j]-1;
-                    rad = sqrt(dx*dx + dy*dy + dz*dz);
+                    int jSpec = speciesPtr[j]-1;
+                    Real rad = sqrt(dx*dx + dy*dy + dz*dz);
 
-                    if((nearest[id*(nspecies+1) + jSpec] == 0 || nearest[id*(nspecies+1) + jSpec] > rad) && rad != 0)
+                    if((nearestPtr[id*(nspecies+1) + jSpec] == 0 || nearestPtr[id*(nspecies+1) + jSpec] > rad) && rad != 0)
                     { 
-                        nearest[id*(nspecies +1)+ jSpec] = rad;
+                        nearestPtr[id*(nspecies +1)+ jSpec] = rad;
 //                        
                     }
 
-                    if((nearest[id*(nspecies+1) + nspecies] == 0 || nearest[id*(nspecies+1) + nspecies] > rad) && rad != 0)
+                    if((nearestPtr[id*(nspecies+1) + nspecies] == 0 || nearestPtr[id*(nspecies+1) + nspecies] > rad) && rad != 0)
                     { 
-                        nearest[id*(nspecies +1) + nspecies] = rad;
+                        nearestPtr[id*(nspecies +1) + nspecies] = rad;
 //                        Print() << "Particle " << i << " species " << jSpec << ", " << nearest[i*nspecies + jSpec] << "\n";
                     }
 
                     // if particles are close enough, increment the bin
                     if(rad < totalDist && rad > 0.) {
 
-                        bin = (int)floor(rad/binSize);
-                        radDist[bin]++;
-                            
+                        int bin = static_cast<int>(rad/binSize);
+                        radDistPtr[bin]++;
+
                         if (part.rdata(FHD_realData::q) > 0) {
-                            if (charge[j] > 0) {
-                                radDist_pp[bin]++;
+                            if (chargePtr[j] > 0) {
+                                radDist_ppPtr[bin]++;
                             }
-                            else if (charge[j] < 0) {
-                                radDist_pm[bin]++;
+                            else if (chargePtr[j] < 0) {
+                                radDist_pmPtr[bin]++;
                             }
                         }
                         else if (part.rdata(FHD_realData::q) < 0) {
-                            if (charge[j] > 0) {
-                                radDist_pm[bin]++;
+                            if (chargePtr[j] > 0) {
+                                radDist_pmPtr[bin]++;
                             }
-                            else if (charge[j] < 0) {
-                                radDist_mm[bin]++;
+                            else if (chargePtr[j] < 0) {
+                                radDist_mmPtr[bin]++;
                             }
                         }
                     }
@@ -847,11 +863,11 @@ void FhdParticleContainer::RadialDistribution(long totalParticles, const int ste
                 }
                 }                
             }  // loop over j (total particles)
-        } // loop over i (np; local particles)
+        }); // loop over i (np; local particles)
     }
 
     // compute total number density
-    double n0_total = 0.;
+    Real n0_total = 0.;
     for (int i=0; i<nspecies; ++i) {
         n0_total += particleInfo[i].n0;
     }
@@ -861,7 +877,7 @@ void FhdParticleContainer::RadialDistribution(long totalParticles, const int ste
     ParallelDescriptor::ReduceRealSum(radDist_pp.dataPtr(),totalBins);
     ParallelDescriptor::ReduceRealSum(radDist_pm.dataPtr(),totalBins);
     ParallelDescriptor::ReduceRealSum(radDist_mm.dataPtr(),totalBins);
-    ParallelDescriptor::ReduceRealSum(nearest,(nspecies+1)*totalParticles);
+    ParallelDescriptor::ReduceRealSum(nearest.dataPtr(),(nspecies+1)*totalParticles);
 
     int specCount[nspecies];
 
@@ -923,7 +939,7 @@ void FhdParticleContainer::RadialDistribution(long totalParticles, const int ste
     // increment number of snapshots
     radialStatsCount++;
     int stepsminusone = radialStatsCount - 1;
-    double stepsinv = 1.0/(double)radialStatsCount;
+    Real stepsinv = 1.0/(double)radialStatsCount;
 
     // update the mean radial distribution
     for(int i=0;i<totalBins;i++) {
