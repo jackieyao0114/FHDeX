@@ -55,7 +55,7 @@ namespace common {
 
     // Physical parameters
     extern amrex::Vector<amrex::Real> grav;
-    extern int                        nspecies;
+    extern AMREX_GPU_DEVICE_MANAGED int nspecies;
     extern amrex::Vector<amrex::Real> molmass;
     extern amrex::Vector<amrex::Real> rhobar;
     extern amrex::Real                rho0;
@@ -171,8 +171,8 @@ namespace common {
     extern int                        radialdist_int;
     extern int                        cartdist_int;
     extern int                        n_steps_skip;
-    extern amrex::Real                binSize;
-    extern amrex::Real                searchDist;    
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real binSize;
+    extern AMREX_GPU_DEVICE_MANAGED amrex::Real searchDist;    
 
     // projection 
     extern int                        project_dir;

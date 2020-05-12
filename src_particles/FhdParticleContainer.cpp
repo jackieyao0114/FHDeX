@@ -690,12 +690,14 @@ void FhdParticleContainer::RadialDistribution(long totalParticles, const int ste
     BL_PROFILE_VAR("RadialDistribution()",RadialDistribution);
         
     const int lev = 0;
-    int bin;
     Real domx, domy, domz, totalDist, temp;
 
     domx = (prob_hi[0] - prob_lo[0]);
     domy = (prob_hi[1] - prob_lo[1]);
     domz = (prob_hi[2] - prob_lo[2]);
+
+    GpuArray<Real, 3> p_prob_hi = {prob_hi[0],prob_hi[1],prob_hi[2]};
+    GpuArray<Real, 3> p_prob_lo = {prob_lo[0],prob_lo[1],prob_lo[2]}; 
 
     Gpu::ManagedDeviceVector<Real> posx(totalParticles, 0.0);
     Gpu::ManagedDeviceVector<Real> posy(totalParticles, 0.0);
@@ -765,14 +767,14 @@ void FhdParticleContainer::RadialDistribution(long totalParticles, const int ste
 
             ParticleType & part = particles[i];
 
-            int iilo = (part.pos(0)-searchDist <= prob_lo[0]) ? -1 : 0;
-            int iihi = (part.pos(0)+searchDist >= prob_hi[0]) ?  1 : 0;
+            int iilo = (part.pos(0)-searchDist <= p_prob_lo[0]) ? -1 : 0;
+            int iihi = (part.pos(0)+searchDist >= p_prob_hi[0]) ?  1 : 0;
 
-            int jjlo = (part.pos(1)-searchDist <= prob_lo[1]) ? -1 : 0;
-            int jjhi = (part.pos(1)+searchDist >= prob_hi[1]) ?  1 : 0;
+            int jjlo = (part.pos(1)-searchDist <= p_prob_lo[1]) ? -1 : 0;
+            int jjhi = (part.pos(1)+searchDist >= p_prob_hi[1]) ?  1 : 0;
 
-            int kklo = (part.pos(2)-searchDist <= prob_lo[2]) ? -1 : 0;
-            int kkhi = (part.pos(2)+searchDist >= prob_hi[2]) ?  1 : 0;
+            int kklo = (part.pos(2)-searchDist <= p_prob_lo[2]) ? -1 : 0;
+            int kkhi = (part.pos(2)+searchDist >= p_prob_hi[2]) ?  1 : 0;
                 
             int id = part.id() - 1;
              
@@ -807,7 +809,7 @@ void FhdParticleContainer::RadialDistribution(long totalParticles, const int ste
                     // if particles are close enough, increment the bin
                     if(rad < totalDist && rad > 0.) {
 
-                        bin = static_cast<int>(rad/binSize);
+                        int bin = static_cast<int>(rad/binSize);
                         radDistPtr[bin]++;
 
                         if (part.rdata(FHD_realData::q) > 0) {
