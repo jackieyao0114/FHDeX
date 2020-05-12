@@ -847,7 +847,7 @@ void main_driver(const char* argv)
 
         //particles.BuildCorrectionTable(dxp,0);
 
-        if (rfd_tog==1) {
+        if (rfd_tog==1 && variance_coef_mom != 0) {
             // Apply RFD force to fluid
             particles.RFD(0, dx, sourceTemp, RealFaceCoords);
             particles.ResetMarkers(0);
