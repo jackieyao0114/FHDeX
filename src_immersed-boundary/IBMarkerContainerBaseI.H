@@ -846,9 +846,9 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx,
       AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
          Real pos_grid[3] = {0.0,0.0,0.0};
-         pos_grid[0]=(pos_grid[0]-coords_x(i,j,k))*invdx[0];
-         pos_grid[1]=(pos_grid[1]-coords_x(i,j,k))*invdx[1];
-         pos_grid[2]=(pos_grid[2]-coords_x(i,j,k))*invdx[2];
+         pos_grid[0]=(pos[0]-coords_x(i,j,k,0))*invdx[0];
+         pos_grid[1]=(pos[1]-coords_x(i,j,k,1))*invdx[1];
+         pos_grid[2]=(pos[2]-coords_x(i,j,k,2))*invdx[2];
 
          Real weight = 1.0;
          for (int i=0; i<spaceDim; ++i)
@@ -864,9 +864,9 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx,
       AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
          Real pos_grid[3] = {0.0,0.0,0.0};
-         pos_grid[0]=(pos_grid[0]-coords_y(i,j,k))*invdx[0];
-         pos_grid[1]=(pos_grid[1]-coords_y(i,j,k))*invdx[1];
-         pos_grid[2]=(pos_grid[2]-coords_y(i,j,k))*invdx[2];
+         pos_grid[0]=(pos[0]-coords_y(i,j,k,0))*invdx[0];
+         pos_grid[1]=(pos[1]-coords_y(i,j,k,1))*invdx[1];
+         pos_grid[2]=(pos[2]-coords_y(i,j,k,2))*invdx[2];
 
          Real weight = 1.0;
          for (int i=0; i<spaceDim; ++i)
@@ -882,9 +882,9 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx,
       AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
          Real pos_grid[3] = {0.0,0.0,0.0};
-         pos_grid[0]=(pos_grid[0]-coords_z(i,j,k))*invdx[0];
-         pos_grid[1]=(pos_grid[1]-coords_z(i,j,k))*invdx[1];
-         pos_grid[2]=(pos_grid[2]-coords_z(i,j,k))*invdx[2];
+         pos_grid[0]=(pos[0]-coords_z(i,j,k,0))*invdx[0];
+         pos_grid[1]=(pos[1]-coords_z(i,j,k,1))*invdx[1];
+         pos_grid[2]=(pos[2]-coords_z(i,j,k,2))*invdx[2];
 
          Real weight = 1.0;
          for (int i=0; i<spaceDim; ++i)
@@ -1187,7 +1187,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& 
         gs = 4;
     }
 
-    const GpuArray<Real, AMREX_SPACEDIM> invdx;
+    GpuArray<Real, AMREX_SPACEDIM> invdx;
     Real invvol = 1.0;
 
     for (int i=0; i<AMREX_SPACEDIM; ++i)
@@ -1249,9 +1249,9 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& 
       AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
          Real pos_grid[3] = {0.0,0.0,0.0};
-         pos_grid[0]=(pos_grid[0]-coords_x(i,j,k))*invdx[0];
-         pos_grid[1]=(pos_grid[1]-coords_x(i,j,k))*invdx[1];
-         pos_grid[2]=(pos_grid[2]-coords_x(i,j,k))*invdx[2];
+         pos_grid[0]=(pos[0]-coords_x(i,j,k,0))*invdx[0];
+         pos_grid[1]=(pos[1]-coords_x(i,j,k,1))*invdx[1];
+         pos_grid[2]=(pos[2]-coords_x(i,j,k,2))*invdx[2];
 
          Real weight = 1.0;
          for (int i=0; i<spaceDim; ++i)
@@ -1276,9 +1276,9 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& 
       AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
          Real pos_grid[3] = {0.0,0.0,0.0};
-         pos_grid[0]=(pos_grid[0]-coords_y(i,j,k))*invdx[0];
-         pos_grid[1]=(pos_grid[1]-coords_y(i,j,k))*invdx[1];
-         pos_grid[2]=(pos_grid[2]-coords_y(i,j,k))*invdx[2];
+         pos_grid[0]=(pos[0]-coords_y(i,j,k,0))*invdx[0];
+         pos_grid[1]=(pos[1]-coords_y(i,j,k,1))*invdx[1];
+         pos_grid[2]=(pos[2]-coords_y(i,j,k,2))*invdx[2];
 
          Real weight = 1.0;
          for (int i=0; i<spaceDim; ++i)
@@ -1303,9 +1303,9 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& 
       AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
          Real pos_grid[3] = {0.0,0.0,0.0};
-         pos_grid[0]=(pos_grid[0]-coords_z(i,j,k))*invdx[0];
-         pos_grid[1]=(pos_grid[1]-coords_z(i,j,k))*invdx[1];
-         pos_grid[2]=(pos_grid[2]-coords_z(i,j,k))*invdx[2];
+         pos_grid[0]=(pos[0]-coords_z(i,j,k,0))*invdx[0];
+         pos_grid[1]=(pos[1]-coords_z(i,j,k,1))*invdx[1];
+         pos_grid[2]=(pos[2]-coords_z(i,j,k,2))*invdx[2];
 
          Real weight = 1.0;
          for (int i=0; i<spaceDim; ++i)
