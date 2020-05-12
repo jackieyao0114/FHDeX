@@ -4,6 +4,7 @@
 #include <AMReX.H>
 #include <FhdParticleContainer.H>
 #include <common_namespace.H>
+#include <kernel_functions_K.H>
 
 /**
    Check if particle is near a boundary. Assumes boundary is parallel to either xy, zx, yz, plane
@@ -545,6 +546,103 @@ void compute_forces_nl (FhdParticleContainer::AoS& aos, int Np, int Nn,
     });
 
     rcount = std::min(rcount, rcount_d.dataValue());
+}
+
+template <int ks, typename F>
+void collect_charge (FhdParticleContainer::AoS& aos, F f,
+                     const amrex::Geometry& geom,
+                     FArrayBox& fab)
+{
+    using namespace amrex;
+
+    const auto Np = aos.numParticles();
+    const auto pstruct = aos().dataPtr();
+
+    const auto dx = geom.CellSizeArray();
+    const auto dxi = geom.InvCellSizeArray();
+    const auto plo = geom.ProbLoArray();
+
+    auto arr = fab.array();
+    
+    AMREX_FOR_1D( Np, i, 
+    {
+        FhdParticleContainer::ParticleType& p = pstruct[i];
+
+        Real fr[3];
+        fr[0] = (p.pos(0) - plo[0]) * dxi[0];
+        fr[1] = (p.pos(1) - plo[1]) * dxi[1];
+        fr[2] = (p.pos(2) - plo[2]) * dxi[2];
+
+        int fi[3];
+        fi[0] = std::floor(fr[0]);
+        fi[1] = std::floor(fr[1]);
+        fi[2] = std::floor(fr[2]);
+
+        Real fd[3];
+        fd[0] = fr[0] - fi[0];
+        fd[1] = fr[1] - fi[1];
+        fd[2] = fr[2] - fi[2];
+
+        int fn[3];
+        fn[0] = (fd[0] < 0.5) ? -1 : 0;
+        fn[1] = (fd[1] < 0.5) ? -1 : 0;
+        fn[2] = (fd[2] < 0.5) ? -1 : 0;
+            
+        int wcount;
+        Real wcheck;
+
+        Real wx[2*ks];
+        for (int i = 0 ; i < 2*ks; ++i)
+        {
+            Real xx = p.pos(0) - (fi[0] + i + fn[0])*dx[0];
+            wx[i] = f(xx*dxi[0]);
+        }
+        
+        Real wy[2*ks];
+        for (int i = 0 ; i < 2*ks; ++i)
+        {
+            Real yy = p.pos(1) - (fi[1] + i + fn[1])*dx[1];
+            wy[i] = f(yy*dxi[1]);
+        }
+
+        Real wz[2*ks];
+        for (int i = 0 ; i < 2*ks; ++i)
+        {
+            Real zz = p.pos(2) - (fi[2] + i + fn[2])*dx[2];
+            wz[i] = f(zz*dxi[2]);
+        }
+
+        for (int k = 0 ; k < 2*ks; ++k) {
+            for (int j = 0 ; j < 2*ks; ++j) {
+                for (int i = 0 ; i < 2*ks; ++i) {
+                    arr(fi[0] + i + fn[0],
+                        fi[1] + j + fn[1],
+                        fi[2] + k + fn[2]) = wx[i]*wy[j]*wz[k];
+                }
+            }
+        }
+    });
+    
+}
+
+void collect_charge (FhdParticleContainer::AoS& aos, const amrex::Geometry& geom,
+                     FArrayBox& fab)
+{
+    if (common::pkernel_es == 3)
+    {
+        constexpr int ks = 2;
+        collect_charge<ks>(aos, kernel_3p, geom, fab); 
+    }
+    else if (common::pkernel_es == 4)
+    {
+        constexpr int ks = 3;
+        collect_charge<ks>(aos, kernel_4p, geom, fab); 
+    }
+    else if (common::pkernel_es == 4)
+    {
+        constexpr int ks = 4;
+        collect_charge<ks>(aos, kernel_6p, geom, fab);
+    }
 }
 
 #endif
