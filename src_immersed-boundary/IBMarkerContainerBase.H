@@ -115,7 +115,7 @@ public:
                       const Real* dx, 
                       int* nghost);
 
-    static void SpreadKernelNew(const AoS& aos,
+    static void SpreadKernelGpu(const AoS& aos,
                       const Box& bx,
                       std::array<      FArrayBox *, AMREX_SPACEDIM> & f_out,
                       std::array<      FArrayBox *, AMREX_SPACEDIM> & f_weights,
@@ -136,7 +136,7 @@ public:
                        const std::array<MultiFab, AMREX_SPACEDIM> & coords,
                        const Real* dx, int ghost) const;
 
-    void SpreadMarkersNew(int lev,
+    void SpreadMarkersGpu(int lev,
             std::array<MultiFab, AMREX_SPACEDIM> & f_out,
             const std::array<MultiFab, AMREX_SPACEDIM> & coords,
             const Real * dx, int ghost) const;
