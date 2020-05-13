@@ -440,12 +440,50 @@ void FhdParticleContainer::MoveIons2(const Real dt, const Real* dxFluid, const R
                 Real inttime = 0;
                 int intsurf, intside;
 
-                while(runtime > 0)
-                {
-                    find_inter(&part, &runtime, paramPlaneList, &paramPlaneCount, &intsurf, &inttime, &intside, ZFILL(plo), ZFILL(phi));
+//                while(runtime > 0)
+//                {
+//                    find_inter(&part, &runtime, paramPlaneList, &paramPlaneCount, &intsurf, &inttime, &intside, ZFILL(plo), ZFILL(phi));
+
+//                    Real posAlt[3];
+//                    for (int d=0; d<AMREX_SPACEDIM; ++d)
+//                    {
+//                        part.rdata(FHD_realData::pred_posx + d) = part.pos(d);
+//                        //part.pos(d) += dt * part.rdata(FHD_realData::velx + d);
+//                    }
+
+//                    if(intsurf > 0)
+//                    {
+
+//                        paramPlane* surf = paramPlaneList[i];
+
+//                         surf => paramplanes(intsurf)
+
+//                         if(surf%periodicity .eq. 0) then
+
+//                           call apply_bc(surf, part, intside, domsize, push, 1, 1)
+
+//                           runtime = runtime - inttime
+
+//                         else
+
+//                          runtime = runtime - inttime
+
+//                          part%pos(1) = part%pos(1) + runtime*part%vel(1)
+//                          part%pos(2) = part%pos(2) + runtime*part%vel(2)
+//#if (BL_SPACEDIM == 3)
+//                          part%pos(3) = part%pos(3) + runtime*part%vel(3)
+//#endif
+//                          runtime = 0
+
+//                        endif
+
+//                      else
+//                       runtime = 0
+
+//                    }
 
 
-                }
+ //               }
 
             
 

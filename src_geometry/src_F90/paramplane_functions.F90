@@ -99,7 +99,7 @@
     
     use iso_c_binding, only: c_int
     use cell_sorted_particle_module, only: particle_t
-    use paramplane_module
+    use paramplane_type_module
     use precheck_module
     
     implicit none
@@ -199,7 +199,7 @@
     
     use iso_c_binding, only: c_int
     use cell_sorted_particle_module, only: particle_t
-    use paramplane_module
+    use paramplane_type_module
     use precheck_module
     
     implicit none
@@ -300,7 +300,7 @@
     use iso_c_binding, only: c_int
     use amrex_fort_module, only: amrex_real, amrex_particle_real
     use cell_sorted_particle_module, only: particle_t
-    use paramplane_module
+    use paramplane_type_module
     use rng_functions_module
     use common_namelist_module, only: prob_hi, fixed_dt, graphene_tog
     
@@ -521,7 +521,7 @@
     use iso_c_binding, only: c_int
     use amrex_fort_module, only: amrex_real, amrex_particle_real
     use cell_sorted_particle_module, only: particle_t
-    use paramplane_module
+    use paramplane_type_module
     use rng_functions_module
      use common_namelist_module, only: prob_hi, fixed_dt, mass, k_b, particle_count, prob_lo, t_init, particle_n0, max_step, domega
     
@@ -555,7 +555,7 @@
     use iso_c_binding, only: c_int
     use amrex_fort_module, only: amrex_real, amrex_particle_real
     use cell_sorted_particle_module, only: particle_t
-    use paramplane_module
+    use paramplane_type_module
     use rng_functions_module
      use common_namelist_module, only: prob_hi, fixed_dt, mass, k_b, particle_count, prob_lo, t_init, particle_n0
     
@@ -625,7 +625,7 @@ subroutine surf_velocity(surf, part, time, oldvel, inttime)
  use iso_c_binding, only: c_int
  use amrex_fort_module, only: amrex_real, amrex_particle_real
  use cell_sorted_particle_module, only: particle_t
- use paramplane_module
+ use paramplane_type_module
  use rng_functions_module
  use common_namelist_module, only: prob_hi, fixed_dt, particle_neff
  
