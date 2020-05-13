@@ -650,6 +650,26 @@ void spread_op (amrex::Array4<amrex::Real> const& arr, F f,
 }
 
 template <typename F>
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+void inter_op (amrex::Array4<amrex::Real> const& arr, F f,
+               amrex::Real w[3][2*F::ks], int indices[3][2*F::ks],
+               FhdParticleContainer::ParticleType& p, int pcomp)
+{
+    constexpr int ks = F::ks;
+
+    for (int k = 0 ; k < 2*ks; ++k) {
+        for (int j = 0 ; j < 2*ks; ++j) {
+            for (int i = 0 ; i < 2*ks; ++i) {
+                int ii = indices[0][i];
+                int jj = indices[1][j];
+                int kk = indices[2][k];
+                p.rdata(pcomp) += w[0][i]*w[1][j]*w[2][k]*arr(ii, jj, kk);
+            }
+        }
+    }    
+}
+
+template <typename F>
 void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& charge, F f,
                      const amrex::Real* plo_in, const amrex::Real* dx_in)
 {
