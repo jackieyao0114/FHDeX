@@ -114,6 +114,14 @@ public:
                       GpuArray<Real, AMREX_SPACEDIM>const& v_spread,
                       const Real* dx, 
                       int* nghost);
+
+    static void SpreadKernelNew(const AoS& aos,
+                      const Box& bx,
+                      std::array<      FArrayBox *, AMREX_SPACEDIM> & f_out,
+                      std::array<      FArrayBox *, AMREX_SPACEDIM> & f_weights,
+                      const std::array<const FArrayBox *, AMREX_SPACEDIM> & coords,
+                      const Real* dx,
+                      int* nghost);
     //---------------------------------------------------------------------------
 
 
@@ -127,6 +135,11 @@ public:
                              std::array<MultiFab, AMREX_SPACEDIM> & f_out,
                        const std::array<MultiFab, AMREX_SPACEDIM> & coords,
                        const Real* dx, int ghost) const;
+
+    void SpreadMarkersNew(int lev,
+            std::array<MultiFab, AMREX_SPACEDIM> & f_out,
+            const std::array<MultiFab, AMREX_SPACEDIM> & coords,
+            const Real * dx, int ghost) const;
 
     void SpreadPredictor(int lev,
                          std::array<MultiFab, AMREX_SPACEDIM> & f_out) const;
