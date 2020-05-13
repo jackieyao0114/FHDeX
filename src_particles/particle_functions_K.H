@@ -569,64 +569,37 @@ void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab, F f,
 
     auto arr = fab.array();
     
-    AMREX_FOR_1D( Np, ip, 
+    amrex::ParallelFor(Np, [=] AMREX_GPU_HOST_DEVICE (int ip) noexcept
     {
         FhdParticleContainer::ParticleType& p = pstruct[ip];
 
-        Real fr[3];
-        fr[0] = (p.pos(0) - plo[0]) * dxi[0];
-        fr[1] = (p.pos(1) - plo[1]) * dxi[1];
-        fr[2] = (p.pos(2) - plo[2]) * dxi[2];
-
-        int fi[3];
-        fi[0] = std::floor(fr[0]);
-        fi[1] = std::floor(fr[1]);
-        fi[2] = std::floor(fr[2]);
-
-        Real fd[3];
-        fd[0] = fr[0] - fi[0];
-        fd[1] = fr[1] - fi[1];
-        fd[2] = fr[2] - fi[2];
-
-        int fn[3];
-        fn[0] = (fd[0] < 0.5) ? -1 : 0;
-        fn[1] = (fd[1] < 0.5) ? -1 : 0;
-        fn[2] = (fd[2] < 0.5) ? -1 : 0;
-            
-        int wcount;
-        Real wcheck;
-
+        Real fr[3], fd[3];
+        int fi[3], fn[3];
+        
+        for (int idim = 0; idim < 3; ++idim) {
+            fr[idim] = (p.pos(idim) - plo[idim]) * dxi[idim];
+            fi[idim] = std::floor(fr[idim]);
+            fd[idim] = fr[idim] - fi[idim];
+            fn[idim] = (fd[idim] < 0.5) ? -1 : 0;
+        }
+                       
         Real qm = p.rdata(FHD_realData::q)/permittivity;
 
-        Real wx[2*ks];
-        for (int i = 0 ; i < 2*ks; ++i)
-        {
-            Real xx = p.pos(0) - (fi[0] + i - (ks-1) + fn[0] + 0.5)*dx[0] + plo[0];
-            wx[i] = f(xx*dxi[0]);
+        Real w[3][2*ks];
+        for (int idim = 0; idim < 3; ++idim) {
+            for (int i = 0 ; i < 2*ks; ++i) {
+                Real rr = p.pos(idim) - (fi[idim]+i-(ks-1)+fn[idim]+0.5)*dx[idim] + plo[idim];
+                w[idim][i] = f(rr*dxi[idim]);
+            }
         }
         
-        Real wy[2*ks];
-        for (int i = 0 ; i < 2*ks; ++i)
-        {
-            Real yy = p.pos(1) - (fi[1] + i - (ks-1) + fn[1] + 0.5)*dx[1] + plo[1];
-            wy[i] = f(yy*dxi[1]);
-        }
-
-        Real wz[2*ks];
-        for (int i = 0 ; i < 2*ks; ++i)
-        {
-            Real zz = p.pos(2) - (fi[2] + i - (ks-1) + fn[2] + 0.5)*dx[2] + plo[2];
-            wz[i] = f(zz*dxi[2]);
-        }
-
         for (int k = 0 ; k < 2*ks; ++k) {
             for (int j = 0 ; j < 2*ks; ++j) {
                 for (int i = 0 ; i < 2*ks; ++i) {
-                    amrex::Gpu::Atomic::Add( 
-                                            &arr(fi[0] + i - (ks-1) + fn[0],
-                                                 fi[1] + j - (ks-1) + fn[1],
-                                                 fi[2] + k - (ks-1) + fn[2]),
-                                            qm*wx[i]*wy[j]*wz[k]*volinv);
+                    amrex::Gpu::Atomic::Add( &arr(fi[0] + i - (ks-1) + fn[0],
+                                                  fi[1] + j - (ks-1) + fn[1],
+                                                  fi[2] + k - (ks-1) + fn[2]),
+                                             qm*w[0][i]*w[1][j]*w[2][k]*volinv);
                 }
             }
         }
