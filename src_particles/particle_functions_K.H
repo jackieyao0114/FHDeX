@@ -551,6 +551,53 @@ void compute_forces_nl (FhdParticleContainer::AoS& aos, int Np, int Nn,
 }
 
 template <typename F>
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+void get_weights_scalar (const FhdParticleContainer::ParticleType& p, F f,
+                         amrex::Real weights[3][2*F::ks], int indices[3][2*F::ks],
+                         const amrex::GpuArray<amrex::Real, 3>& plo,
+                         const amrex::GpuArray<amrex::Real, 3>& dx,
+                         const amrex::GpuArray<amrex::Real, 3>& dxi)
+{
+    Real fr[3], fd[3];
+    int fi[3], fn[3];
+
+    constexpr int ks = F::ks;
+    
+    for (int idim = 0; idim < 3; ++idim) {
+        fr[idim] = (p.pos(idim) - plo[idim]) * dxi[idim];
+        fi[idim] = std::floor(fr[idim]);
+        fd[idim] = fr[idim] - fi[idim];
+        fn[idim] = (fd[idim] < 0.5) ? -1 : 0;
+    }
+        
+    for (int idim = 0; idim < 3; ++idim) {
+        for (int i = 0 ; i < 2*ks; ++i) {
+            Real rr = p.pos(idim) - (fi[idim]+i-(ks-1)+fn[idim]+0.5)*dx[idim] + plo[idim];
+            weights[idim][i] = f(rr*dxi[idim]);
+            indices[idim][i] = fi[idim]+i-(ks-1)+fn[idim];
+        }
+    }
+}
+
+template <typename F>
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+void spread_op_scalar (amrex::Array4<amrex::Real> const& arr, F f, 
+                       amrex::Real w[3][2*F::ks], int indices[3][2*F::ks],
+                       amrex::Real value)
+{
+    constexpr int ks = F::ks;
+
+    for (int k = 0 ; k < 2*ks; ++k) {
+        for (int j = 0 ; j < 2*ks; ++j) {
+            for (int i = 0 ; i < 2*ks; ++i) {
+                amrex::Gpu::Atomic::Add( &arr(indices[0][i], indices[1][j], indices[2][k]),
+                                         w[0][i]*w[1][j]*w[2][k]*value);
+            }
+        }
+    }    
+}
+
+template <typename F>
 void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab, F f,
                      const amrex::Real* plo_in, const amrex::Real* dx_in, amrex::Real dt)
 {
@@ -573,36 +620,13 @@ void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab, F f,
     {
         FhdParticleContainer::ParticleType& p = pstruct[ip];
 
-        Real fr[3], fd[3];
-        int fi[3], fn[3];
+        Real w[3][2*ks];
+        int indices[3][2*ks];
+        get_weights_scalar(p, f, w, indices, plo, dx, dxi);
         
-        for (int idim = 0; idim < 3; ++idim) {
-            fr[idim] = (p.pos(idim) - plo[idim]) * dxi[idim];
-            fi[idim] = std::floor(fr[idim]);
-            fd[idim] = fr[idim] - fi[idim];
-            fn[idim] = (fd[idim] < 0.5) ? -1 : 0;
-        }
-                       
         Real qm = p.rdata(FHD_realData::q)/permittivity;
 
-        Real w[3][2*ks];
-        for (int idim = 0; idim < 3; ++idim) {
-            for (int i = 0 ; i < 2*ks; ++i) {
-                Real rr = p.pos(idim) - (fi[idim]+i-(ks-1)+fn[idim]+0.5)*dx[idim] + plo[idim];
-                w[idim][i] = f(rr*dxi[idim]);
-            }
-        }
-        
-        for (int k = 0 ; k < 2*ks; ++k) {
-            for (int j = 0 ; j < 2*ks; ++j) {
-                for (int i = 0 ; i < 2*ks; ++i) {
-                    amrex::Gpu::Atomic::Add( &arr(fi[0] + i - (ks-1) + fn[0],
-                                                  fi[1] + j - (ks-1) + fn[1],
-                                                  fi[2] + k - (ks-1) + fn[2]),
-                                             qm*w[0][i]*w[1][j]*w[2][k]*volinv);
-                }
-            }
-        }
+        spread_op_scalar(arr, f, w, indices, qm*volinv);        
     });
 }
 
