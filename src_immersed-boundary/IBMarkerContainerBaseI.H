@@ -1972,11 +1972,13 @@ void IBMarkerContainerBase<StructReal, StructInt>::ReadStaticParameters() {
     if (!initialized) {
         ParmParse pp("particles");
 
+#ifndef AMREX_USE_GPU
         // AMReX default is false => enable by default
         this->do_tiling = true;
         // Allow user to overwrite
         pp.query("do_tiling",  this->do_tiling);
-
+#endif
+        
         // If tiling is enabled, make sure that the tile size is at least the
         // number of ghost cells (otherwise strange things happen)
         if (this->do_tiling)
