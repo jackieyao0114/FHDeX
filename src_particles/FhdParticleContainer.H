@@ -344,6 +344,7 @@ public:
     int n_list;
 
     struct CHECK_PAIR {
+        AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
         bool operator()(const ParticleType & p1, const ParticleType & p2) const {
             return true;
         }

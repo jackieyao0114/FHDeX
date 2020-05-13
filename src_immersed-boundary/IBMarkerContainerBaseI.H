@@ -129,7 +129,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::RFD(
     }
 
     // spread this term into the velocity forcing
-    SpreadMarkersNew(lev, f_out, coords, dx, 1);
+    SpreadMarkersGpu(lev, f_out, coords, dx, 1);
 
     for (MyIBMarIter pti(* this, lev); pti.isValid(); ++pti) {
 
@@ -160,7 +160,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::RFD(
     }
 
     // spread this term into the velocity forcing
-    SpreadMarkersNew(lev, f_out, coords, dx, 1);
+    SpreadMarkersGpu(lev, f_out, coords, dx, 1);
 
     for (MyIBMarIter pti(* this, lev); pti.isValid(); ++pti) {
 
@@ -523,7 +523,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadMarkers(
 
     // Convert stagered boxes into cell centered
     Box bx = enclosedCells(f_out[0]->box());
-/*
+
     spread_markers(BL_TO_FORTRAN_BOX(bx),
                    BL_TO_FORTRAN_BOX(tile_box),
                    BL_TO_FORTRAN_ANYD(* f_out[0]),
@@ -551,171 +551,11 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadMarkers(
                    f_in.dataPtr(),
                    & n_marker,
                    dx, & ghost);
-*/
-    GpuArray<Real, AMREX_SPACEDIM> pos; 
-    GpuArray<Real, AMREX_SPACEDIM> v_spread;
 
-    for (int i=0; i<n_marker; ++i) 
-    {
-       for (int j=0; j<AMREX_SPACEDIM; ++j)
-       {          
-          pos[j] = f_pos[i][j];
-       }
-       if (ghost == 0)
-       {
-          if (pos[0] < tile_box.loVect()[0]*dx[0]) continue;
-          if (pos[0] >= (tile_box.hiVect()[0]+1)*dx[0]) continue;
-
-          if (pos[1] < tile_box.loVect()[1]*dx[1]) continue;
-          if (pos[1] >= (tile_box.hiVect()[1]+1)*dx[1]) continue;
-
-          if (pos[2] < tile_box.loVect()[2]*dx[2]) continue;
-          if (pos[2] >= (tile_box.hiVect()[2]+1)*dx[2]) continue; 
-       }
-       for (int j=0; j<AMREX_SPACEDIM; ++j)
-       {
-          v_spread[j] = f_in[i][j];
-       }
-       SpreadKernel(bx, f_out, f_weights, coords, pos, v_spread, dx, & ghost);
-   }
-}
-
-AMREX_GPU_HOST_DEVICE AMREX_INLINE    
-Real kernel_3p (Real r_in)
-{
-    Real kernel_3p;
-
-    //internal variables
-    Real r;
-    Real r1;
-    Real r2;
- 
-    //initialize r
-    r = r_in;
-    r1 = std::abs(r_in);
-    r2 = r1*r1;
-
-    if (r1 <= 0.5)
-    {
-       kernel_3p = (1+std::sqrt(1-(3*r2)))/3.0;
-    }
-    else if (r1 <= 1.5)
-    {
-       kernel_3p = (5.0-(3.0*r1)-std::sqrt(-3*(1-r1)*(1-r1)+1))/6.0;
-    }
-    else
-    {
-       kernel_3p = 0.0;
-    }
-
-    return kernel_3p;
-}
-
-AMREX_GPU_HOST_DEVICE AMREX_INLINE
-Real kernel_4p(Real r_in)
-{
-    Real kernel_4p;
-
-    Real r2 = r_in*r_in;
-
-    if (r_in <= -2)
-    {
-       kernel_4p = 0.0;
-    }
-    else if (r_in <= -1)
-    {
-       kernel_4p = 0.125*(5.0 + (2.0*r_in) - std::sqrt(-7.0-(12.0*r_in) - (4.0*r2)));
-    }
-    else if (r_in <= 0)
-    {
-       kernel_4p = 0.125*(3.0 + (2.0*r_in) + std::sqrt(1.0 - (4.0*r_in) - (4.0*r2)));
-    }
-    else if (r_in <= 1)
-    {
-       kernel_4p = 0.125*(3.0 - (2.0*r_in) + std::sqrt(1.0 + (4.0*r_in) - (4.0*r2)));
-    }
-    else if (r_in <= 2)
-    {
-       kernel_4p = 0.125*(5.0 - (2.0*r_in) - std::sqrt(-7.0 + (12.0*r_in) - (4.0*r2)));
-    }
-    else
-    {
-       kernel_4p = 0.0;
-    }
-
-    return kernel_4p;
-}
-
-AMREX_GPU_HOST_DEVICE AMREX_INLINE
-Real kernel_6p (Real r_in)
-{
-    //The 6-point kernel function, based on the paper:
-    //>*A Gaussian-like immersed-boundary kernel with three continuous derivatives and improved translational invariance*
-    //>Yuanxun Bao, Jason Kaye, Charles S. Peskin, *Journal of Computational Physics* **316**, 139 (2016)
-    //>https://dx.doi.org/10.1016/j.jcp.2016.04.024
-    //Note also: https://github.com/stochasticHydroTools/IBMethod/blob/master/IBKernels/Kernels.c because the paper above has mistakes (but the repo's OK)
-
-    Real kernel_6p;
-
-    //internal parameters
-    Real K = 59.0/60 - std::sqrt(29.0)/20.0;
-    Real sgn = (3.0/2 - K)/std::abs(3.0/2 - K);
-
-    //pre-computed ratios
-    Real inv16 = 1.0/16.0;
-    Real inv8 = 1.0/8.0;
-    Real inv12 = 1.0/12.0;
-    Real inv4 = 1.0/4.0;
-    Real inv6 = 1.0/6.0;
-    Real rat58 = 5.0/8.0;
-
-    //internal variables
-    Real r = r_in;
-
-    //compute kernel function
-    if (r <= -3)
-    {
-       kernel_6p = 0.0; 
-    }
-    else if (r <= -2)
-    {
-       r += 3;
-       kernel_6p = phi1(r);
-    }
-    else if (r <= -1)
-    {
-       r += 2;
-       kernel_6p = -3*phi1(r) - inv16 + inv8*(K+(r*r)) + inv12*((3*K-1)*r+(r*r*r));
-    }
-    else if (r <= 0)
-    {
-       r += 1;
-       kernel_6p = 2*phi1(r) + inv4 + inv6*((4-3*K)*r-(r*r*r));
-    }
-    else if (r <= 1)
-    {
-       kernel_6p = 2*phi1(r) + rat58 - inv4*(K+(r*r));
-    }
-    else if (r <= 2)
-    {
-       r -= 1;
-       kernel_6p = -3*phi1(r) + inv4 - inv6*((4-3*K)*r-(r*r*r));
-    }
-    else if (r <= 3)
-    {
-       r -= 2;
-       kernel_6p = phi1(r) - inv16 + inv8*(K+(r*r)) - inv12*((3*K-1)*r+(r*r*r));
-    }
-    else
-    {
-       kernel_6p = 0.0;
-    }
-
-    return kernel_6p;
 }
 
 template <typename StructReal, typename StructInt>
-void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernelNew(const AoS& aos,
+void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernelGpu(const AoS& aos,
          const Box& bx,
          std::array<     FArrayBox *, AMREX_SPACEDIM> & f_out,
          std::array<     FArrayBox *, AMREX_SPACEDIM> & f_weights,
@@ -724,7 +564,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernelNew(const AoS& ao
          int* nghost)
 {
     // timer for profiling
-    BL_PROFILE_VAR("SpreadKernelNew()",SpreadKernelNew);
+    BL_PROFILE_VAR("SpreadKernelGpu()",SpreadKernelGpu);
 
     GpuArray<Real, AMREX_SPACEDIM> invdx;
     Real invvol = 1.0;
@@ -752,6 +592,8 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernelNew(const AoS& ao
 
     const auto Np = aos.numParticles();
     const auto pstruct = aos().dataPtr();
+    int ng = *nghost;
+    
     AMREX_FOR_1D( Np, ip,
     {
         const ParticleType& p = pstruct[ip];
@@ -773,20 +615,20 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernelNew(const AoS& ao
             gs = 4;
         }
 
-        if (*nghost == 0)
+        if (ng == 0)
         {
             int loc = static_cast<int>(p.pos(0) * invdx[0] - gs);
             lo_dim[0] = (loc >= bx_lo[0]) ? loc : bx_lo[0];
             loc = static_cast<int>(p.pos(0) * invdx[0] + gs);
-            hi_dim[0] = (loc >= bx_hi[0]) ? loc : bx_hi[0];
+            hi_dim[0] = (loc <= bx_hi[0]) ? loc : bx_hi[0];
             loc = static_cast<int>(p.pos(1) * invdx[1] - gs);
             lo_dim[1] = (loc >= bx_lo[1]) ? loc : bx_lo[1];
             loc = static_cast<int>(p.pos(1) * invdx[1] + gs);
-            hi_dim[1] = (loc >= bx_hi[1]) ? loc : bx_hi[1];
+            hi_dim[1] = (loc <= bx_hi[1]) ? loc : bx_hi[1];
             loc = static_cast<int>(p.pos(2) * invdx[2] - gs);
             lo_dim[2] = (loc >= bx_lo[2]) ? loc : bx_lo[2];
             loc = static_cast<int>(p.pos(2) * invdx[2] + gs);
-            hi_dim[2] = (loc >= bx_hi[2]) ? loc : bx_hi[2];
+            hi_dim[2] = (loc <= bx_hi[2]) ? loc : bx_hi[2];
         }
         else
         {
@@ -812,21 +654,19 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernelNew(const AoS& ao
                   {
                      if(pkernel_fluid == 3)
                      {
-                        weight*=kernel_3p(pos_grid[ii]);
+                        weight*=Kernel3P()(pos_grid[ii]);
                      }
                      else if (pkernel_fluid == 4)
                      {
-                        weight*=kernel_4p(pos_grid[ii]);
+                        weight*=Kernel4P()(pos_grid[ii]);
                      }
                      else
                      {
-                        weight*=kernel_6p(pos_grid[ii]);
+                        weight*=Kernel6P()(pos_grid[ii]);
                      }
                   }
                   amrex::Gpu::Atomic::Add(&fout_x(i,j,k), p.rdata(StructReal::forcex + 0)*weight*invvol);
-                  //fout_x(i,j,k) += p.rdata(StructReal::forcex + 0)*weight*invvol;
                   amrex::Gpu::Atomic::Add(&fweights_x(i,j,k), weight);
-                  //fweights_x(i,j,k) += weight;
                 }
             }
         }
@@ -845,21 +685,19 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernelNew(const AoS& ao
                   {
                      if(pkernel_fluid == 3)
                      {
-                        weight*=kernel_3p(pos_grid[ii]);
+                        weight*=Kernel3P()(pos_grid[ii]);
                      }
                      else if (pkernel_fluid == 4)
                      {
-                        weight*=kernel_4p(pos_grid[ii]);
+                        weight*=Kernel4P()(pos_grid[ii]);
                      }
                      else
                      {
-                        weight*=kernel_6p(pos_grid[ii]);
+                        weight*=Kernel6P()(pos_grid[ii]);
                      }
                   }
                   amrex::Gpu::Atomic::Add(&fout_y(i,j,k), p.rdata(StructReal::forcex + 1)*weight*invvol);
                   amrex::Gpu::Atomic::Add(&fweights_y(i,j,k), weight);
-                  //fout_y(i,j,k) += p.rdata(StructReal::forcex + 1)*weight*invvol;
-                  //fweights_y(i,j,k) += weight;
                 }
             }
         }
@@ -878,38 +716,34 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernelNew(const AoS& ao
                   {
                      if(pkernel_fluid == 3)
                      {
-                        weight*=kernel_3p(pos_grid[ii]);
+                        weight*=Kernel3P()(pos_grid[ii]);
                      }
                      else if (pkernel_fluid == 4)
                      {
-                        weight*=kernel_4p(pos_grid[ii]);
+                        weight*=Kernel4P()(pos_grid[ii]);
                      }
                      else
                      {
-                        weight*=kernel_6p(pos_grid[ii]);
+                        weight*=Kernel6P()(pos_grid[ii]);
                      }
                   }
                   amrex::Gpu::Atomic::Add(&fout_z(i,j,k), p.rdata(StructReal::forcex + 2)*weight*invvol);
                   amrex::Gpu::Atomic::Add(&fweights_z(i,j,k), weight);
-                  //fout_z(i,j,k) += p.rdata(StructReal::forcex + 2)*weight*invvol;
-                  //fweights_z(i,j,k) += weight;
                 }
             }
         }
-
-
     });
 }   
 
 template <typename StructReal, typename StructInt>
-void IBMarkerContainerBase<StructReal, StructInt>::SpreadMarkersNew(
+void IBMarkerContainerBase<StructReal, StructInt>::SpreadMarkersGpu(
             int lev,
             std::array<MultiFab, AMREX_SPACEDIM> & f_out,
             const std::array<MultiFab, AMREX_SPACEDIM> & coords,
             const Real * dx, int ghost) const 
 {
     // timer for profiling
-    BL_PROFILE_VAR("SpreadMarkersNew()",SpreadMarkersNew);
+    BL_PROFILE_VAR("SpreadMarkersGpu()",SpreadMarkersGpu);
 
     std::array<MultiFab, AMREX_SPACEDIM> f_weights;
     for (int d=0; d<AMREX_SPACEDIM; ++d) {
@@ -926,7 +760,6 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadMarkersNew(
         
         auto& particle_tile = this->GetParticles(lev).at(std::make_pair(grid_id,tile_id));
         const auto& particles = particle_tile.GetArrayOfStructs();
-        const int np = particles.numParticles();
 
         Box tile_box = enclosedCells(f_out[0][pti].box());
 
@@ -938,182 +771,53 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadMarkersNew(
             f_weights_fab[d] = & f_weights[d][pti];
             coords_fab[d]    = & coords[d][pti];
         }
-        SpreadKernelNew(particles, tile_box, f_out_fab, f_weights_fab, coords_fab, dx, & ghost);
+        SpreadKernelGpu(particles, tile_box, f_out_fab, f_weights_fab, coords_fab, dx, & ghost);
     }
 }
  
 template <typename StructReal, typename StructInt>
-void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx, 
-         std::array<     FArrayBox *, AMREX_SPACEDIM> & f_out, 
-         std::array<     FArrayBox *, AMREX_SPACEDIM> & f_weights, 
-         const std::array<const FArrayBox *, AMREX_SPACEDIM> & coords, 
-         GpuArray<Real, AMREX_SPACEDIM>const& pos, 
-         GpuArray<Real, AMREX_SPACEDIM>const& v_spread, 
-         const Real* dx, 
-         int* nghost)  
+void IBMarkerContainerBase<StructReal, StructInt>::InterpolateMarkersGpu(
+            int lev,
+            const Real * dx,
+            const std::array<MultiFab, AMREX_SPACEDIM> & f_in,
+            const std::array<MultiFab, AMREX_SPACEDIM> & coords)
 {
     // timer for profiling
-    BL_PROFILE_VAR("SpreadKernel()",SpreadKernel);
+    BL_PROFILE_VAR("InterpolateMarkersGpu()",InterpolateMarkersGpu);
 
-    int ilo, ihi, jlo, jhi, klo, khi, gs;
-
-    if(pkernel_fluid == 3) 
-    {
-        gs = 2;
-    }
-    else if (pkernel_fluid == 4)
-    {
-        gs = 3;
-    }
-    else 
-    {
-        gs = 4;
+    int check = 0;
+    std::array<MultiFab, AMREX_SPACEDIM> f_weights;
+    for (int d=0; d<AMREX_SPACEDIM; ++d) {
+        f_weights[d].define(f_in[d].boxArray(), f_in[d].DistributionMap(),
+                            1, f_in[d].nGrow());
+        f_weights[d].setVal(-1.);
     }
 
-    GpuArray<Real, AMREX_SPACEDIM> invdx;
-    Real invvol = 1.0;
+    for (MyConstIBMarIter pti(* this, lev); pti.isValid(); ++pti) {
 
-    for (int i=0; i<AMREX_SPACEDIM; ++i)
-        invdx[i]=1.0/dx[i];
+        const int grid_id = pti.index();
+        const int tile_id = pti.LocalTileIndex();
+        
+        auto& particle_tile = this->GetParticles(lev).at(std::make_pair(grid_id,tile_id));
+        auto& particles = particle_tile.GetArrayOfStructs();
 
-    for (int i=0; i<AMREX_SPACEDIM; ++i)
-        invvol *= invdx[i]; 
+        Box tile_box = enclosedCells(f_in[0][pti].box());
 
-    if (*nghost == 0)
-    {
-        int loc = static_cast<int>(pos[0] * invdx[0] - gs);
-        ilo = std::max(bx.loVect()[0], loc);
-        loc = static_cast<int>(pos[0] * invdx[0] + gs);
-        ihi = std::max(bx.hiVect()[0], loc);
-        loc = static_cast<int>(pos[1] * invdx[1] - gs);
-        jlo = std::max(bx.loVect()[1], loc);
-        loc = static_cast<int>(pos[1] * invdx[1] + gs);
-        jhi = std::max(bx.hiVect()[1], loc);
-        loc = static_cast<int>(pos[2] * invdx[2] - gs);
-        klo = std::max(bx.loVect()[2], loc);
-        loc = static_cast<int>(pos[2] * invdx[2] + gs);
-        khi = std::max(bx.hiVect()[2], loc);
-    }
-    else
-    {
-        ilo = static_cast<int>(pos[0] * invdx[0] - gs);
-        ihi = static_cast<int>(pos[0] * invdx[0] + gs);
-        jlo = static_cast<int>(pos[1] * invdx[1] - gs);
-        jhi = static_cast<int>(pos[1] * invdx[1] + gs);
-        klo = static_cast<int>(pos[2] * invdx[2] - gs);
-        khi = static_cast<int>(pos[2] * invdx[2] + gs); 
+        std::array<      FArrayBox *, AMREX_SPACEDIM> f_in_fab;
+        std::array<      FArrayBox *, AMREX_SPACEDIM> f_weights_fab;
+        std::array<const FArrayBox *, AMREX_SPACEDIM> coords_fab;
+        for (int d=0; d<AMREX_SPACEDIM; ++d) {
+            f_in_fab[d]     = & f_in[d][pti];
+            f_weights_fab[d] = & f_weights[d][pti];
+            coords_fab[d]    = & coords[d][pti];
+        }
+        InterpolateKernelGpu(particles, tile_box, f_in_fab, f_weights_fab, coords_fab, dx, 0, check);
     }
 
-    IntVect scalx_lo(ilo,jlo,klo);
-    IntVect scalx_hi(ihi+1,jhi,khi);
-    const Box bx_x(scalx_lo, scalx_hi);
-    IntVect scaly_lo(ilo,jlo,klo);
-    IntVect scaly_hi(ihi,jhi+1,khi);
-    const Box bx_y(scaly_lo, scaly_hi);
-    IntVect scalz_lo(ilo,jlo,klo);
-    IntVect scalz_hi(ihi,jhi,khi+1);
-    const Box bx_z(scalz_lo, scalz_hi);    
-    Array4<Real> const& fout_x = f_out[0]->array();
-    Array4<Real> const& fout_y = f_out[1]->array();
-    Array4<Real> const& fout_z = f_out[2]->array();
-    Array4<Real> const& fweights_x = f_weights[0]->array();
-    Array4<Real> const& fweights_y = f_weights[1]->array();
-    Array4<Real> const& fweights_z = f_weights[2]->array();
-    Array4<const Real> const& coords_x = coords[0]->array();
-    Array4<const Real> const& coords_y = coords[1]->array();
-    Array4<const Real> const& coords_z = coords[2]->array();
-
-    const int spaceDim = AMREX_SPACEDIM;
-
-    // x-components
-    amrex::ParallelFor(bx_x,
-      [=]
-      AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+    if (check)
     {
-         Real pos_grid[3] = {0.0,0.0,0.0};
-         pos_grid[0]=(pos[0]-coords_x(i,j,k,0))*invdx[0];
-         pos_grid[1]=(pos[1]-coords_x(i,j,k,1))*invdx[1];
-         pos_grid[2]=(pos[2]-coords_x(i,j,k,2))*invdx[2];
-
-         Real weight = 1.0;
-         for (int ii=0; ii<spaceDim; ++ii)
-         {
-            if(pkernel_fluid == 3)
-            {
-               weight*=kernel_3p(pos_grid[ii]);
-            }
-            else if (pkernel_fluid == 4)
-            {
-               weight*=kernel_4p(pos_grid[ii]);
-            }
-            else
-            {
-               weight*=kernel_6p(pos_grid[ii]);
-            }
-         }
-         fout_x(i,j,k) += v_spread[0]*weight*invvol;
-         fweights_x(i,j,k) += weight;
-    });
-
-    // y-components
-    amrex::ParallelFor(bx_y,
-      [=]
-      AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-    {
-         Real pos_grid[3] = {0.0,0.0,0.0};
-         pos_grid[0]=(pos[0]-coords_y(i,j,k,0))*invdx[0];
-         pos_grid[1]=(pos[1]-coords_y(i,j,k,1))*invdx[1];
-         pos_grid[2]=(pos[2]-coords_y(i,j,k,2))*invdx[2];
-
-         Real weight = 1.0;
-         for (int ii=0; ii<spaceDim; ++ii)
-         {
-            if(pkernel_fluid == 3)
-            {
-               weight*=kernel_3p(pos_grid[ii]);
-            }
-            else if (pkernel_fluid == 4)
-            {
-               weight*=kernel_4p(pos_grid[ii]);
-            }
-            else
-            {
-               weight*=kernel_6p(pos_grid[ii]);
-            }
-         }
-         fout_y(i,j,k) += v_spread[1]*weight*invvol;
-         fweights_y(i,j,k) += weight;
-    });
-
-    // z-components
-    amrex::ParallelFor(bx_z,
-      [=]
-      AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-    {
-         Real pos_grid[3] = {0.0,0.0,0.0};
-         pos_grid[0]=(pos[0]-coords_z(i,j,k,0))*invdx[0];
-         pos_grid[1]=(pos[1]-coords_z(i,j,k,1))*invdx[1];
-         pos_grid[2]=(pos[2]-coords_z(i,j,k,2))*invdx[2];
-
-         Real weight = 1.0;
-         for (int ii=0; ii<spaceDim; ++ii)
-         {
-            if(pkernel_fluid == 3)
-            {
-               weight*=kernel_3p(pos_grid[ii]);
-            }
-            else if (pkernel_fluid == 4)
-            {
-               weight*=kernel_4p(pos_grid[ii]);
-            }
-            else
-            {
-               weight*=kernel_6p(pos_grid[ii]);
-            }
-         }
-         fout_z(i,j,k) += v_spread[2]*weight*invvol;
-         fweights_z(i,j,k) += weight;
-    });
+       amrex::Print() << "Particles out of bound in InterpolateKernelGpu" << std::endl; 
+    }
 }
 
 template <typename StructReal, typename StructInt>
@@ -1323,7 +1027,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateMarkers(
 
     // Convert stagered boxes into cell centered
     Box bx = enclosedCells(f_in[0]->box());
-/*
+
     interpolate_markers(BL_TO_FORTRAN_BOX(bx),
                         BL_TO_FORTRAN_BOX(tile_box),
                         BL_TO_FORTRAN_ANYD(* f_in[0]),
@@ -1351,105 +1055,38 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateMarkers(
                         f_out.dataPtr(),
                         & n_marker,
                         dx );
-*/
-    GpuArray<Real, AMREX_SPACEDIM> pos;
-    Gpu::ManagedDeviceVector<Real> v_spread(AMREX_SPACEDIM);
 
-    for (int i=0; i<n_marker; ++i) 
-    {
-       for (int j=0; j<AMREX_SPACEDIM; ++j)
-       {     
-          pos[j] = f_pos[i][j];
-       }
-       if (pos[0] < tile_box.loVect()[0]*dx[0]) continue;
-       if (pos[0] >= (tile_box.hiVect()[0]+1)*dx[0]) continue;
-       if (pos[1] < tile_box.loVect()[1]*dx[1]) continue;
-       if (pos[1] >= (tile_box.hiVect()[1]+1)*dx[1]) continue;
-       if (pos[2] < tile_box.loVect()[2]*dx[2]) continue;
-       if (pos[2] >= (tile_box.hiVect()[2]+1)*dx[2]) continue;
-       for (int j=0; j<AMREX_SPACEDIM; ++j)
-       {
-          v_spread[j] = 0.0;
-       }
-       InterpolateKernel(bx, f_in, f_weights, coords, pos, v_spread, dx, & ghost);
-       for (int j=0; j<AMREX_SPACEDIM; ++j)
-       {
-          f_out[i][j] = v_spread[j];
-       }
-    }
 }
 
 template <typename StructReal, typename StructInt>
-void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& bx, 
+void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernelGpu(AoS& aos,
+         const Box& bx, 
          const std::array<const FArrayBox *, AMREX_SPACEDIM> & f_in, 
          const std::array<const FArrayBox *, AMREX_SPACEDIM> & f_weights, 
          const std::array<const FArrayBox *, AMREX_SPACEDIM> & coords, 
-         GpuArray<Real, AMREX_SPACEDIM>const& pos,
-         Gpu::ManagedDeviceVector<Real>& v_spread,
          const Real* dx, 
-         const int* nghost)  
+         const int* nghost,
+         int& check)  
 {
+
     // timer for profiling
-    BL_PROFILE_VAR("InterpolateKernel()",InterpolateKernel);
-
-    int ilo, ihi, jlo, jhi, klo, khi, gs;
-
-    if(pkernel_fluid == 3) 
-    {
-        gs = 2;
-    }
-    else if (pkernel_fluid == 4)
-    {
-        gs = 3;
-    }
-    else 
-    {
-        gs = 4;
-    }
+    BL_PROFILE_VAR("InterpolateKernelGpu()",InterpolateKernelGpu);
 
     GpuArray<Real, AMREX_SPACEDIM> invdx;
+    Gpu::ManagedDeviceVector<int> checkg(1, check);
+
     Real invvol = 1.0;
 
     for (int i=0; i<AMREX_SPACEDIM; ++i)
         invdx[i]=1.0/dx[i];
 
     for (int i=0; i<AMREX_SPACEDIM; ++i)
-        invvol *= invdx[i]; 
+        invvol *= invdx[i];
 
-    if (*nghost == 0)
-    {
-        int loc = static_cast<int>(pos[0] * invdx[0] - gs);
-        ilo = std::max(bx.loVect()[0], loc);
-        loc = static_cast<int>(pos[0] * invdx[0] + gs);
-        ihi = std::max(bx.hiVect()[0], loc);
-        loc = static_cast<int>(pos[1] * invdx[1] - gs);
-        jlo = std::max(bx.loVect()[1], loc);
-        loc = static_cast<int>(pos[1] * invdx[1] + gs);
-        jhi = std::max(bx.hiVect()[1], loc);
-        loc = static_cast<int>(pos[2] * invdx[2] - gs);
-        klo = std::max(bx.loVect()[2], loc);
-        loc = static_cast<int>(pos[2] * invdx[2] + gs);
-        khi = std::max(bx.hiVect()[2], loc);
-    }
-    else
-    {
-        ilo = static_cast<int>(pos[0] * invdx[0] - gs);
-        ihi = static_cast<int>(pos[0] * invdx[0] + gs);
-        jlo = static_cast<int>(pos[1] * invdx[1] - gs);
-        jhi = static_cast<int>(pos[1] * invdx[1] + gs);
-        klo = static_cast<int>(pos[2] * invdx[2] - gs);
-        khi = static_cast<int>(pos[2] * invdx[2] + gs); 
-    }
+    const int spaceDim = AMREX_SPACEDIM;
 
-    IntVect scalx_lo(ilo,jlo,klo);
-    IntVect scalx_hi(ihi+1,jhi,khi);
-    const Box bx_x(scalx_lo, scalx_hi);
-    IntVect scaly_lo(ilo,jlo,klo);
-    IntVect scaly_hi(ihi,jhi+1,khi);
-    const Box bx_y(scaly_lo, scaly_hi);
-    IntVect scalz_lo(ilo,jlo,klo);
-    IntVect scalz_hi(ihi,jhi,khi+1);
-    const Box bx_z(scalz_lo, scalz_hi);    
+    GpuArray<int, 3> bx_lo = {bx.loVect()[0], bx.loVect()[1], bx.loVect()[2]};
+    GpuArray<int, 3> bx_hi = {bx.hiVect()[0], bx.hiVect()[1], bx.hiVect()[2]};
 
     Array4<const Real> const& fin_x = f_in[0]->array();
     Array4<const Real> const& fin_y = f_in[1]->array();
@@ -1460,129 +1097,198 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernel(const Box& 
     Array4<const Real> const& coords_x = coords[0]->array();
     Array4<const Real> const& coords_y = coords[1]->array();
     Array4<const Real> const& coords_z = coords[2]->array();
-    Real* v_spreadPtr = v_spread.dataPtr();
 
-    const int spaceDim = AMREX_SPACEDIM;
+    const auto Np = aos.numParticles();
+    const auto pstruct = aos().dataPtr();
+    int ng = *nghost;
 
-    // x-components
-    amrex::ParallelFor(bx_x,
-      [=]
-      AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+    AMREX_FOR_1D( Np, ip,
     {
-         Real pos_grid[3] = {0.0,0.0,0.0};
-         pos_grid[0]=(pos[0]-coords_x(i,j,k,0))*invdx[0];
-         pos_grid[1]=(pos[1]-coords_x(i,j,k,1))*invdx[1];
-         pos_grid[2]=(pos[2]-coords_x(i,j,k,2))*invdx[2];
+        ParticleType& p = pstruct[ip];
 
-         Real weight = 1.0;
-         for (int ii=0; ii<spaceDim; ++ii)
-         {
-            if(pkernel_fluid == 3)
-            {
-               weight*=kernel_3p(pos_grid[ii]);
-            }
-            else if (pkernel_fluid == 4)
-            {
-               weight*=kernel_4p(pos_grid[ii]);
-            }
-            else
-            {
-               weight*=kernel_6p(pos_grid[ii]);
-            }
-         }
+        int lo_dim[3];
+        int hi_dim[3];
+        int gs;
 
-         Real wfrac = 1.0;
-         if (fweights_x(i,j,k) > 0)
-         {
-            wfrac = weight/fweights_x(i,j,k);
-         }
-         else
-         {
-            wfrac = 1.0;
-         }
+        if(pkernel_fluid == 3)
+        {
+            gs = 2;
+        }
+        else if (pkernel_fluid == 4)
+        {
+            gs = 3;
+        }
+        else
+        {
+            gs = 4;
+        }
 
-         v_spreadPtr[0] = v_spreadPtr[0]+fin_x(i,j,k)*wfrac*weight;
+        if (ng == 0)
+        {
+            int loc = static_cast<int>(p.pos(0) * invdx[0] - gs);
+            lo_dim[0] = (loc >= bx_lo[0]) ? loc : bx_lo[0];
+            if (loc<bx_lo[0]) checkg[0] = 1;
+
+            loc = static_cast<int>(p.pos(0) * invdx[0] + gs);
+            hi_dim[0] = (loc <= bx_hi[0]) ? loc : bx_hi[0];
+            if (loc>bx_hi[0]) checkg[0] = 1;
+
+            loc = static_cast<int>(p.pos(1) * invdx[1] - gs);
+            lo_dim[1] = (loc >= bx_lo[1]) ? loc : bx_lo[1];
+            if (loc<bx_lo[1]) checkg[0] = 1;
+
+            loc = static_cast<int>(p.pos(1) * invdx[1] + gs);
+            hi_dim[1] = (loc <= bx_hi[1]) ? loc : bx_hi[1];
+            if (loc>bx_hi[1]) checkg[0] = 1;
+
+            loc = static_cast<int>(p.pos(2) * invdx[2] - gs);
+            lo_dim[2] = (loc >= bx_lo[2]) ? loc : bx_lo[2];
+            if (loc<bx_lo[2]) checkg[0] = 1;
+
+            loc = static_cast<int>(p.pos(2) * invdx[2] + gs);
+            hi_dim[2] = (loc <= bx_hi[2]) ? loc : bx_hi[2];
+            if (loc>bx_hi[2]) checkg[0] = 1;
+        }
+        else
+        {
+            lo_dim[0] = static_cast<int>(p.pos(0) * invdx[0] - gs);
+            if (lo_dim[0]<bx_lo[0]) checkg[0] = 1;
+            hi_dim[0] = static_cast<int>(p.pos(0) * invdx[0] + gs);
+            if (hi_dim[0]>bx_hi[0]) checkg[0] = 1;
+            lo_dim[1] = static_cast<int>(p.pos(1) * invdx[1] - gs);
+            if (lo_dim[1]<bx_lo[1]) checkg[0] = 1;
+            hi_dim[1] = static_cast<int>(p.pos(1) * invdx[1] + gs);
+            if (hi_dim[1]>bx_hi[1]) checkg[0] = 1;
+            lo_dim[2] = static_cast<int>(p.pos(2) * invdx[2] - gs);
+            if (lo_dim[2]<bx_lo[2]) checkg[0] = 1;
+            hi_dim[2] = static_cast<int>(p.pos(2) * invdx[2] + gs);
+            if (hi_dim[2]>bx_hi[2]) checkg[0] = 1;
+        }
+
+        // x-components
+        for (int k = lo_dim[2] ; k < hi_dim[2]; ++k) {
+            for (int j = lo_dim[1] ; j < hi_dim[1]; ++j) {
+                for (int i = lo_dim[0] ; i < hi_dim[0]+1; ++i) {
+                  Real pos_grid[3];
+                  pos_grid[0]=(p.pos(0)-coords_x(i,j,k,0))*invdx[0];
+                  pos_grid[1]=(p.pos(1)-coords_x(i,j,k,1))*invdx[1];
+                  pos_grid[2]=(p.pos(2)-coords_x(i,j,k,2))*invdx[2];
+
+                  Real weight = 1.0;
+                  for (int ii=0; ii<spaceDim; ++ii)
+                  {
+                     if(pkernel_fluid == 3)
+                     {
+                        weight*=Kernel3P()(pos_grid[ii]);
+                     }
+                     else if (pkernel_fluid == 4)
+                     {
+                        weight*=Kernel4P()(pos_grid[ii]);
+                     }
+                     else
+                     {
+                        weight*=Kernel6P()(pos_grid[ii]);
+                     }
+                  }
+
+                  Real wfrac = 1.0;
+                  if (fweights_x(i,j,k) > 0)
+                  {
+                     wfrac = weight/fweights_x(i,j,k);
+                  }
+                  else
+                  {
+                     wfrac = 1.0;
+                  }
+                 
+                  p.rdata(StructReal::velx + 0) += fin_x(i,j,k)*wfrac*weight; 
+                }
+            }
+        }
+
+        // y-components
+        for (int k = lo_dim[2] ; k < hi_dim[2]; ++k) {
+            for (int j = lo_dim[1] ; j < hi_dim[1]+1; ++j) {
+                for (int i = lo_dim[0] ; i < hi_dim[0]; ++i) {
+                  Real pos_grid[3];
+                  pos_grid[0]=(p.pos(0)-coords_y(i,j,k,0))*invdx[0];
+                  pos_grid[1]=(p.pos(1)-coords_y(i,j,k,1))*invdx[1];
+                  pos_grid[2]=(p.pos(2)-coords_y(i,j,k,2))*invdx[2];
+
+                  Real weight = 1.0;
+                  for (int ii=0; ii<spaceDim; ++ii)
+                  {
+                     if(pkernel_fluid == 3)
+                     {
+                        weight*=Kernel3P()(pos_grid[ii]);
+                     }
+                     else if (pkernel_fluid == 4)
+                     {
+                        weight*=Kernel4P()(pos_grid[ii]);
+                     }
+                     else
+                     {
+                        weight*=Kernel6P()(pos_grid[ii]);
+                     }
+                  }
+
+                  Real wfrac = 1.0;
+                  if (fweights_y(i,j,k) > 0)
+                  {
+                     wfrac = weight/fweights_y(i,j,k);
+                  }
+                  else
+                  {
+                     wfrac = 1.0;
+                  }
+                 
+                  p.rdata(StructReal::velx + 1) += fin_y(i,j,k)*wfrac*weight; 
+                }
+            }
+        }
+
+        // z-components
+        for (int k = lo_dim[2] ; k < hi_dim[2]+1; ++k) {
+            for (int j = lo_dim[1] ; j < hi_dim[1]; ++j) {
+                for (int i = lo_dim[0] ; i < hi_dim[0]; ++i) {
+                  Real pos_grid[3];
+                  pos_grid[0]=(p.pos(0)-coords_z(i,j,k,0))*invdx[0];
+                  pos_grid[1]=(p.pos(1)-coords_z(i,j,k,1))*invdx[1];
+                  pos_grid[2]=(p.pos(2)-coords_z(i,j,k,2))*invdx[2];
+
+                  Real weight = 1.0;
+                  for (int ii=0; ii<spaceDim; ++ii)
+                  {
+                     if(pkernel_fluid == 3)
+                     {
+                        weight*=Kernel3P()(pos_grid[ii]);
+                     }
+                     else if (pkernel_fluid == 4)
+                     {
+                        weight*=Kernel4P()(pos_grid[ii]);
+                     }
+                     else
+                     {
+                        weight*=Kernel6P()(pos_grid[ii]);
+                     }
+                  }
+
+                  Real wfrac = 1.0;
+                  if (fweights_z(i,j,k) > 0)
+                  {
+                     wfrac = weight/fweights_z(i,j,k);
+                  }
+                  else
+                  {
+                     wfrac = 1.0;
+                  }
+                 
+                  p.rdata(StructReal::velx + 2) += fin_z(i,j,k)*wfrac*weight; 
+                }
+            }
+        }
     });
-
-    // y-components
-    amrex::ParallelFor(bx_y,
-      [=]
-      AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-    {
-         Real pos_grid[3] = {0.0,0.0,0.0};
-         pos_grid[0]=(pos[0]-coords_y(i,j,k,0))*invdx[0];
-         pos_grid[1]=(pos[1]-coords_y(i,j,k,1))*invdx[1];
-         pos_grid[2]=(pos[2]-coords_y(i,j,k,2))*invdx[2];
-
-         Real weight = 1.0;
-         for (int ii=0; ii<spaceDim; ++ii)
-         {
-            if(pkernel_fluid == 3)
-            {
-               weight*=kernel_3p(pos_grid[ii]);
-            }
-            else if (pkernel_fluid == 4)
-            {
-               weight*=kernel_4p(pos_grid[ii]);
-            }
-            else
-            {
-               weight*=kernel_6p(pos_grid[ii]);
-            }
-         }
-
-         Real wfrac = 1.0;
-         if (fweights_y(i,j,k) > 0)
-         {
-            wfrac = weight/fweights_y(i,j,k);
-         }
-         else
-         {
-            wfrac = 1.0;
-         }
-
-         v_spreadPtr[1] = v_spreadPtr[1]+fin_y(i,j,k)*wfrac*weight;
-    });
-
-    // z-components
-    amrex::ParallelFor(bx_z,
-      [=]
-      AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-    {
-         Real pos_grid[3] = {0.0,0.0,0.0};
-         pos_grid[0]=(pos[0]-coords_z(i,j,k,0))*invdx[0];
-         pos_grid[1]=(pos[1]-coords_z(i,j,k,1))*invdx[1];
-         pos_grid[2]=(pos[2]-coords_z(i,j,k,2))*invdx[2];
-
-         Real weight = 1.0;
-         for (int ii=0; ii<spaceDim; ++ii)
-         {
-            if(pkernel_fluid == 3)
-            {
-               weight*=kernel_3p(pos_grid[ii]);
-            }
-            else if (pkernel_fluid == 4)
-            {
-               weight*=kernel_4p(pos_grid[ii]);
-            }
-            else
-            {
-               weight*=kernel_6p(pos_grid[ii]);
-            }
-         }
-
-         Real wfrac = 1.0;
-         if (fweights_z(i,j,k) > 0)
-         {
-            wfrac = weight/fweights_z(i,j,k);
-         }
-         else
-         {
-            wfrac = 1.0;
-         }
-
-         v_spreadPtr[2] = v_spreadPtr[2]+fin_z(i,j,k)*wfrac*weight;
-    });
+    check = checkg[0];
 }
 
 template <typename StructReal, typename StructInt>
@@ -1970,11 +1676,13 @@ void IBMarkerContainerBase<StructReal, StructInt>::ReadStaticParameters() {
     if (!initialized) {
         ParmParse pp("particles");
 
+#ifndef AMREX_USE_GPU
         // AMReX default is false => enable by default
         this->do_tiling = true;
         // Allow user to overwrite
         pp.query("do_tiling",  this->do_tiling);
-
+#endif
+        
         // If tiling is enabled, make sure that the tile size is at least the
         // number of ghost cells (otherwise strange things happen)
         if (this->do_tiling)

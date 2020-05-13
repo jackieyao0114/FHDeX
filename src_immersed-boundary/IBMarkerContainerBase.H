@@ -115,7 +115,7 @@ public:
                       const Real* dx, 
                       int* nghost);
 
-    static void SpreadKernelNew(const AoS& aos,
+    static void SpreadKernelGpu(const AoS& aos,
                       const Box& bx,
                       std::array<      FArrayBox *, AMREX_SPACEDIM> & f_out,
                       std::array<      FArrayBox *, AMREX_SPACEDIM> & f_weights,
@@ -136,7 +136,7 @@ public:
                        const std::array<MultiFab, AMREX_SPACEDIM> & coords,
                        const Real* dx, int ghost) const;
 
-    void SpreadMarkersNew(int lev,
+    void SpreadMarkersGpu(int lev,
             std::array<MultiFab, AMREX_SPACEDIM> & f_out,
             const std::array<MultiFab, AMREX_SPACEDIM> & coords,
             const Real * dx, int ghost) const;
@@ -168,14 +168,14 @@ public:
                 const Real * dx, const int ghost
             );
 
-    static void InterpolateKernel(const Box& bx,
+    static void InterpolateKernelGpu(AoS& aos,
+                      const Box& bx,
                       const std::array<const FArrayBox *, AMREX_SPACEDIM> & f_in,
                       const std::array<const FArrayBox *, AMREX_SPACEDIM> & f_weights,
                       const std::array<const FArrayBox *, AMREX_SPACEDIM> & coords,
-                      GpuArray<Real, AMREX_SPACEDIM>const& pos,
-                      Gpu::ManagedDeviceVector<Real>& v_spread,
                       const Real* dx,
-                      const int* nghost);
+                      const int* nghost,
+                      int& check);
     //---------------------------------------------------------------------------
 
 
@@ -187,7 +187,11 @@ public:
             const std::array<MultiFab, AMREX_SPACEDIM> & coords
         );
 
-
+    void InterpolateMarkersGpu(
+            int lev,
+            const Real * dx,
+            const std::array<MultiFab, AMREX_SPACEDIM> & f_in,
+            const std::array<MultiFab, AMREX_SPACEDIM> & coords);
     //___________________________________________________________________________
     // Interpolation operators applied to internal force fields (in amrex::Particles)
     void InterpolateMarkers(int lev,
