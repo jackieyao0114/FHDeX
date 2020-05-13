@@ -615,12 +615,12 @@ void FhdParticleContainer::SpreadIons(const Real dt, const Real* dxFluid, const 
         auto& particles = particle_tile.GetArrayOfStructs();
         const int np = particles.numParticles();
 
-        spread_ions_fhd(particles,
-                        umac[0][pti], umac[1][pti], umac[2][pti],
-                        efield[0][pti], efield[1][pti], efield[2][pti], charge[pti],
-                        sourceTemp[0][pti], sourceTemp[1][pti], sourceTemp[2][pti],
-                        ZFILL(plo), ZFILL(phi), ZFILL(dx), ZFILL(geomF.ProbLo()),
-                        ZFILL(dxFluid), ZFILL(dxE));
+        // spread_ions_fhd(particles,
+        //                 umac[0][pti], umac[1][pti], umac[2][pti],
+        //                 efield[0][pti], efield[1][pti], efield[2][pti], charge[pti],
+        //                 sourceTemp[0][pti], sourceTemp[1][pti], sourceTemp[2][pti],
+        //                 ZFILL(plo), ZFILL(phi), ZFILL(dx), ZFILL(geomF.ProbLo()),
+        //                 ZFILL(dxFluid), ZFILL(dxE));
         
         //Print() << "FHD\n"; 
         spread_ions_fhd(particles.data(), &np,
