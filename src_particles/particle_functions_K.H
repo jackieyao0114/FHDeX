@@ -565,7 +565,7 @@ void get_weights_scalar (const FhdParticleContainer::ParticleType& p, F f,
     
     for (int idim = 0; idim < 3; ++idim) {
         fr[idim] = (p.pos(idim) - plo[idim]) * dxi[idim];
-        fi[idim] = std::floor(fr[idim]);
+        fi[idim] = static_cast<int>(std::floor(fr[idim]));
         fd[idim] = fr[idim] - fi[idim];
         fn[idim] = (fd[idim] < 0.5) ? -1 : 0;
     }

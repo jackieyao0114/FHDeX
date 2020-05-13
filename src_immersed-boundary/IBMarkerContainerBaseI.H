@@ -752,6 +752,8 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernelNew(const AoS& ao
 
     const auto Np = aos.numParticles();
     const auto pstruct = aos().dataPtr();
+    int ng = *nghost;
+    
     AMREX_FOR_1D( Np, ip,
     {
         const ParticleType& p = pstruct[ip];
@@ -773,7 +775,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernelNew(const AoS& ao
             gs = 4;
         }
 
-        if (*nghost == 0)
+        if (ng == 0)
         {
             int loc = static_cast<int>(p.pos(0) * invdx[0] - gs);
             lo_dim[0] = (loc >= bx_lo[0]) ? loc : bx_lo[0];
