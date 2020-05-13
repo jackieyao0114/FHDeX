@@ -550,13 +550,14 @@ void compute_forces_nl (FhdParticleContainer::AoS& aos, int Np, int Nn,
     rcount = std::min(rcount, rcount_d.dataValue());
 }
 
-template <int ks, typename F>
+template <typename F>
 void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab, F f,
                      const amrex::Real* plo_in, const amrex::Real* dx_in,
                      const amrex::Real* ploes_in, const amrex::Real* dxes_in, amrex::Real dt)
 {
     using namespace amrex;
-
+    constexpr int ks = F::ks;
+    
     GpuArray<Real, 3> plo = {plo_in[0], plo_in[1], plo_in[2]};
     GpuArray<Real, 3> dx  = {dx_in[0],  dx_in[1],  dx_in[2] };
 
@@ -644,18 +645,15 @@ void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab,
 {
     if (common::pkernel_es == 3)
     {
-        constexpr int ks = 2;
-        collect_charge<ks>(aos, fab, Kernel3P(), plo, dx, ploes, dxes, dt); 
+        collect_charge(aos, fab, Kernel3P(), plo, dx, ploes, dxes, dt); 
     }
     else if (common::pkernel_es == 4)
     {
-        constexpr int ks = 3;
-        collect_charge<ks>(aos, fab, Kernel4P(), plo, dx, ploes, dxes, dt); 
+        collect_charge(aos, fab, Kernel4P(), plo, dx, ploes, dxes, dt); 
     }
     else if (common::pkernel_es == 6)
     {
-        constexpr int ks = 4;
-        collect_charge<ks>(aos, fab, Kernel6P(), plo, dx, ploes, dxes, dt); 
+        collect_charge(aos, fab, Kernel6P(), plo, dx, ploes, dxes, dt); 
     }
 }
 
