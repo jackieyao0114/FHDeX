@@ -70,7 +70,7 @@ struct FHD_realData {
         sigma,
         eepsilon,
         potential,
-	p3m_radius,
+	    p3m_radius,
         count    // Awesome little trick! (only works if first field is 0)
     };
 
