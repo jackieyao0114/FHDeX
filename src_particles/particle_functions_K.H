@@ -552,38 +552,40 @@ void compute_forces_nl (FhdParticleContainer::AoS& aos, int Np, int Nn,
 
 template <typename F>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-void get_weights_scalar (const FhdParticleContainer::ParticleType& p, F f,
-                         amrex::Real weights[3][2*F::ks], int indices[3][2*F::ks],
-                         const amrex::GpuArray<amrex::Real, 3>& plo,
-                         const amrex::GpuArray<amrex::Real, 3>& dx,
-                         const amrex::GpuArray<amrex::Real, 3>& dxi)
+void get_weights (const FhdParticleContainer::ParticleType& p, F f,
+                  const IntVect& nodal_flag, 
+                  amrex::Real weights[3][2*F::ks], int indices[3][2*F::ks],
+                  const amrex::GpuArray<amrex::Real, 3>& plo,
+                  const amrex::GpuArray<amrex::Real, 3>& dx,
+                  const amrex::GpuArray<amrex::Real, 3>& dxi)
 {
-    Real fr[3], fd[3];
-    int fi[3], fn[3];
+    using namespace amrex;
 
     constexpr int ks = F::ks;
-    
+
+    int fi[3], fn[3];
     for (int idim = 0; idim < 3; ++idim) {
-        fr[idim] = (p.pos(idim) - plo[idim]) * dxi[idim];
-        fi[idim] = static_cast<int>(std::floor(fr[idim]));
-        fd[idim] = fr[idim] - fi[idim];
-        fn[idim] = (fd[idim] < 0.5) ? -1 : 0;
+        Real fr = (p.pos(idim) - plo[idim]) * dxi[idim];
+        fi[idim] = static_cast<int>(std::floor(fr));
+        Real fd = fr - fi[idim];
+        fn[idim] = (fd < 0.5) ? -1 : 0;
     }
         
     for (int idim = 0; idim < 3; ++idim) {
         for (int i = 0 ; i < 2*ks; ++i) {
-            Real rr = p.pos(idim) - (fi[idim]+i-(ks-1)+fn[idim]+0.5)*dx[idim] + plo[idim];
+            int index = fi[idim] + i -(ks-1) + (1 - nodal_flag[idim]) * fn[idim];
+            Real rr = p.pos(idim) - (index + (1-nodal_flag[idim])*0.5)*dx[idim] + plo[idim];
             weights[idim][i] = f(rr*dxi[idim]);
-            indices[idim][i] = fi[idim]+i-(ks-1)+fn[idim];
+            indices[idim][i] = index;
         }
     }
 }
 
 template <typename F>
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-void spread_op_scalar (amrex::Array4<amrex::Real> const& arr, F f, 
-                       amrex::Real w[3][2*F::ks], int indices[3][2*F::ks],
-                       amrex::Real value)
+void spread_op (amrex::Array4<amrex::Real> const& arr, F f, 
+                amrex::Real w[3][2*F::ks], int indices[3][2*F::ks],
+                amrex::Real value)
 {
     constexpr int ks = F::ks;
 
@@ -615,18 +617,19 @@ void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab, F f,
     const auto pstruct = aos().dataPtr();
 
     auto arr = fab.array();
+    const IntVect nodal_flag = fab.box().type();
     
     amrex::ParallelFor(Np, [=] AMREX_GPU_HOST_DEVICE (int ip) noexcept
     {
         FhdParticleContainer::ParticleType& p = pstruct[ip];
 
+        Real qm = p.rdata(FHD_realData::q)/permittivity;
+        
         Real w[3][2*ks];
         int indices[3][2*ks];
-        get_weights_scalar(p, f, w, indices, plo, dx, dxi);
-        
-        Real qm = p.rdata(FHD_realData::q)/permittivity;
 
-        spread_op_scalar(arr, f, w, indices, qm*volinv);        
+        get_weights(p, f, nodal_flag, w, indices, plo, dx, dxi);
+        spread_op(arr, f, w, indices, qm*volinv);
     });
 }
 
