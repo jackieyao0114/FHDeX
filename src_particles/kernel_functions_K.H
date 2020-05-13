@@ -12,15 +12,8 @@ struct Kernel3P
     {
         Real kernel_3p;
 
-        //internal variables
-        Real r;
-        Real r1;
-        Real r2;
-        
-        //initialize r
-        r = r_in;
-        r1 = std::abs(r_in);
-        r2 = r1*r1;
+        Real r1 = std::abs(r_in);
+        Real r2 = r1*r1;
         
         if (r1 <= 0.5)
         {
