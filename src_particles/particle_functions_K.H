@@ -700,4 +700,44 @@ void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab,
     }
 }
 
+template <typename F>
+void spread_ions_fhd (FhdParticleContainer::AoS& aos, F f,
+                      const FArrayBox& ux, const FArrayBox& uy, const FArrayBox& uz,
+                      const FArrayBox& Ex, const FArrayBox& Ey, const FArrayBox& Ez,
+                      const FArrayBox& charge,
+                      FArrayBox& sourcex, FArrayBox& sourcey, FArrayBox& sourcez,
+                      const amrex::Real* plo, const amrex::Real* phi, const amrex::Real* dx,
+                      const amrex::Real* plof, const amrex::Real* dxf, const amrex::Real* dxE)
+{
+    
+}
+
+void spread_ions_fhd (FhdParticleContainer::AoS& aos,
+                      const FArrayBox& ux, const FArrayBox& uy, const FArrayBox& uz,
+                      const FArrayBox& Ex, const FArrayBox& Ey, const FArrayBox& Ez,
+                      const FArrayBox& charge,
+                      FArrayBox& sourcex, FArrayBox& sourcey, FArrayBox& sourcez,
+                      const amrex::Real* plo, const amrex::Real* phi, const amrex::Real* dx,
+                      const amrex::Real* plof, const amrex::Real* dxf, const amrex::Real* dxE)
+{
+    if (common::pkernel_es == 3)
+    {
+        spread_ions_fhd(aos, Kernel4P(), ux, uy, uz, Ex, Ey, Ez,
+                        charge, sourcex, sourcey, sourcez,
+                        plo, phi, dx, plof, dxf, dxE);
+    }
+    else if (common::pkernel_es == 4)
+    {
+        spread_ions_fhd(aos, Kernel4P(), ux, uy, uz, Ex, Ey, Ez,
+                        charge, sourcex, sourcey, sourcez,
+                        plo, phi, dx, plof, dxf, dxE);
+    }
+    else if (common::pkernel_es == 6)
+    {
+        spread_ions_fhd(aos, Kernel6P(), ux, uy, uz, Ex, Ey, Ez,
+                        charge, sourcex, sourcey, sourcez,
+                        plo, phi, dx, plof, dxf, dxE);
+    }
+}
+
 #endif
