@@ -15,6 +15,7 @@
 #include "rng_functions.H"
 #include "paramPlane.H"
 #include "particle_functions_F.H"
+#include "paramplane_functions_F.H"
 
 using namespace amrex;
 using namespace std;

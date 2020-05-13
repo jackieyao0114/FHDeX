@@ -386,6 +386,7 @@ void FhdParticleContainer::MoveIons(const Real dt, const Real* dxFluid, const Re
     
 }
 
+
 void FhdParticleContainer::MoveIons2(const Real dt, const Real* dxFluid, const Real* dxE, const Geometry geomF,
                                     const std::array<MultiFab, AMREX_SPACEDIM>& umac, const std::array<MultiFab, AMREX_SPACEDIM>& efield,
                                     const std::array<MultiFab, AMREX_SPACEDIM>& RealFaceCoords,
@@ -416,103 +417,110 @@ void FhdParticleContainer::MoveIons2(const Real dt, const Real* dxFluid, const R
     InterpolateMarkers(0, dx, umac, RealFaceCoords);
 
 
-    for (FhdParIter pti(*this, lev); pti.isValid(); ++pti)
+    if(move_tog == 2)
     {
-        const int grid_id = pti.index();
-        const int tile_id = pti.LocalTileIndex();
-        const Box& tile_box  = pti.tilebox();
-        
-        auto& particle_tile = GetParticles(lev)[std::make_pair(grid_id,tile_id)];
-        auto& particles = particle_tile.GetArrayOfStructs();
-        np_tile = particles.numParticles();
+        for (MyIBMarIter pti(* this, lev); pti.isValid(); ++pti) {
 
- 
+            TileIndex index(pti.index(), pti.LocalTileIndex());
 
-        // gather statistics
-        np_proc       += np_tile;
-        rejected_proc += rejected_tile;
-        moves_proc    += moves_tile;
-        maxspeed_proc = std::max(maxspeed_proc, maxspeed_tile);
-        maxdist_proc  = std::max(maxdist_proc, maxdist_tile);
-        diffinst_proc += diffinst_tile;
+            AoS & particles = this->GetParticles(lev).at(index).GetArrayOfStructs();
+            long np = this->GetParticles(lev).at(index).numParticles();
 
-        // resize particle vectors after call to move_particles
-        for (IntVect iv = tile_box.smallEnd(); iv <= tile_box.bigEnd(); tile_box.next(iv))
-        {
-            const auto new_size = m_vector_size[grid_id](iv);
-            long imap = tile_box.index(iv);
-            auto& pvec = m_cell_vectors[grid_id][imap];
-            pvec.resize(new_size);
+            for (int i = 0; i < np; ++ i) {
+                ParticleType & part = particles[i];
+
+
+                for (int d=0; d<AMREX_SPACEDIM; ++d)
+                {
+                    part.rdata(FHD_realData::pred_posx + d) = part.pos(d);
+                    //part.pos(d) += dt * part.rdata(FHD_realData::velx + d);
+                }
+
+                Real runtime = 0.5*dt;
+                Real inttime = 0;
+                int intsurf, intside;
+
+                while(runtime > 0)
+                {
+                    find_inter(&part, &runtime, paramPlaneList, &paramPlaneCount, &intsurf, &inttime, &intside, ZFILL(plo), ZFILL(phi));
+
+
+                }
+
+            
+
+            }
         }
     }
 
 
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
 
-    for (FhdParIter pti(*this, lev); pti.isValid(); ++pti)
-    {
-        const int grid_id = pti.index();
-        const int tile_id = pti.LocalTileIndex();
-        const Box& tile_box  = pti.tilebox();
-        
-        auto& particle_tile = GetParticles(lev)[std::make_pair(grid_id,tile_id)];
-        auto& particles = particle_tile.GetArrayOfStructs();
-        np_tile = particles.numParticles();
+//#ifdef _OPENMP
+//#pragma omp parallel
+//#endif
 
-        move_ions_fhd(particles.data(), &np_tile,
-                      &rejected_tile, &moves_tile, &maxspeed_tile,
-                      &maxdist_tile, &diffinst_tile,
-                      ARLIM_3D(tile_box.loVect()),
-                      ARLIM_3D(tile_box.hiVect()),
-                      m_vector_ptrs[grid_id].dataPtr(),
-                      m_vector_size[grid_id].dataPtr(),
-                      ARLIM_3D(m_vector_ptrs[grid_id].loVect()),
-                      ARLIM_3D(m_vector_ptrs[grid_id].hiVect()),
-                      ZFILL(plo), ZFILL(phi), ZFILL(dx), &dt,
-                      ZFILL(geomF.ProbLo()), ZFILL(dxFluid), ZFILL(dxE),
-                      BL_TO_FORTRAN_3D(umac[0][pti]),
-                      BL_TO_FORTRAN_3D(umac[1][pti]),
-#if (AMREX_SPACEDIM == 3)
-                      BL_TO_FORTRAN_3D(umac[2][pti]),
-#endif
-                      BL_TO_FORTRAN_3D(efield[0][pti]),
-                      BL_TO_FORTRAN_3D(efield[1][pti]),
-#if (AMREX_SPACEDIM == 3)
-                      BL_TO_FORTRAN_3D(efield[2][pti]),
-#endif
-                      BL_TO_FORTRAN_3D(RealFaceCoords[0][pti]),
-                      BL_TO_FORTRAN_3D(RealFaceCoords[1][pti]),
-#if (AMREX_SPACEDIM == 3)
-                      BL_TO_FORTRAN_3D(RealFaceCoords[2][pti]),
-#endif
-                      BL_TO_FORTRAN_3D(sourceTemp[0][pti]),
-                      BL_TO_FORTRAN_3D(sourceTemp[1][pti]),
-#if (AMREX_SPACEDIM == 3)
-                      BL_TO_FORTRAN_3D(sourceTemp[2][pti]),
-#endif
-                      BL_TO_FORTRAN_3D(mobility[pti]),
-                      paramPlaneList, &paramPlaneCount, &kinetic, &sw
-            );
+//    for (FhdParIter pti(*this, lev); pti.isValid(); ++pti)
+//    {
+//        const int grid_id = pti.index();
+//        const int tile_id = pti.LocalTileIndex();
+//        const Box& tile_box  = pti.tilebox();
+//        
+//        auto& particle_tile = GetParticles(lev)[std::make_pair(grid_id,tile_id)];
+//        auto& particles = particle_tile.GetArrayOfStructs();
+//        np_tile = particles.numParticles();
+
+//        move_ions_fhd(particles.data(), &np_tile,
+//                      &rejected_tile, &moves_tile, &maxspeed_tile,
+//                      &maxdist_tile, &diffinst_tile,
+//                      ARLIM_3D(tile_box.loVect()),
+//                      ARLIM_3D(tile_box.hiVect()),
+//                      m_vector_ptrs[grid_id].dataPtr(),
+//                      m_vector_size[grid_id].dataPtr(),
+//                      ARLIM_3D(m_vector_ptrs[grid_id].loVect()),
+//                      ARLIM_3D(m_vector_ptrs[grid_id].hiVect()),
+//                      ZFILL(plo), ZFILL(phi), ZFILL(dx), &dt,
+//                      ZFILL(geomF.ProbLo()), ZFILL(dxFluid), ZFILL(dxE),
+//                      BL_TO_FORTRAN_3D(umac[0][pti]),
+//                      BL_TO_FORTRAN_3D(umac[1][pti]),
+//#if (AMREX_SPACEDIM == 3)
+//                      BL_TO_FORTRAN_3D(umac[2][pti]),
+//#endif
+//                      BL_TO_FORTRAN_3D(efield[0][pti]),
+//                      BL_TO_FORTRAN_3D(efield[1][pti]),
+//#if (AMREX_SPACEDIM == 3)
+//                      BL_TO_FORTRAN_3D(efield[2][pti]),
+//#endif
+//                      BL_TO_FORTRAN_3D(RealFaceCoords[0][pti]),
+//                      BL_TO_FORTRAN_3D(RealFaceCoords[1][pti]),
+//#if (AMREX_SPACEDIM == 3)
+//                      BL_TO_FORTRAN_3D(RealFaceCoords[2][pti]),
+//#endif
+//                      BL_TO_FORTRAN_3D(sourceTemp[0][pti]),
+//                      BL_TO_FORTRAN_3D(sourceTemp[1][pti]),
+//#if (AMREX_SPACEDIM == 3)
+//                      BL_TO_FORTRAN_3D(sourceTemp[2][pti]),
+//#endif
+//                      BL_TO_FORTRAN_3D(mobility[pti]),
+//                      paramPlaneList, &paramPlaneCount, &kinetic, &sw
+//            );
 
         // gather statistics
-        np_proc       += np_tile;
-        rejected_proc += rejected_tile;
-        moves_proc    += moves_tile;
-        maxspeed_proc = std::max(maxspeed_proc, maxspeed_tile);
-        maxdist_proc  = std::max(maxdist_proc, maxdist_tile);
-        diffinst_proc += diffinst_tile;
+//        np_proc       += np_tile;
+//        rejected_proc += rejected_tile;
+//        moves_proc    += moves_tile;
+//        maxspeed_proc = std::max(maxspeed_proc, maxspeed_tile);
+//        maxdist_proc  = std::max(maxdist_proc, maxdist_tile);
+//        diffinst_proc += diffinst_tile;
 
-        // resize particle vectors after call to move_particles
-        for (IntVect iv = tile_box.smallEnd(); iv <= tile_box.bigEnd(); tile_box.next(iv))
-        {
-            const auto new_size = m_vector_size[grid_id](iv);
-            long imap = tile_box.index(iv);
-            auto& pvec = m_cell_vectors[grid_id][imap];
-            pvec.resize(new_size);
-        }
-    }
+//        // resize particle vectors after call to move_particles
+//        for (IntVect iv = tile_box.smallEnd(); iv <= tile_box.bigEnd(); tile_box.next(iv))
+//        {
+//            const auto new_size = m_vector_size[grid_id](iv);
+//            long imap = tile_box.index(iv);
+//            auto& pvec = m_cell_vectors[grid_id][imap];
+//            pvec.resize(new_size);
+//        }
+//    }
 
     // gather statistics
     ParallelDescriptor::ReduceIntSum(np_proc);
