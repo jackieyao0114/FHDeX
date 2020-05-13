@@ -599,7 +599,7 @@ void spread_op_scalar (amrex::Array4<amrex::Real> const& arr, F f,
 
 template <typename F>
 void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab, F f,
-                     const amrex::Real* plo_in, const amrex::Real* dx_in, amrex::Real dt)
+                     const amrex::Real* plo_in, const amrex::Real* dx_in)
 {
     using namespace amrex;
     constexpr int ks = F::ks;
@@ -631,19 +631,19 @@ void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab, F f,
 }
 
 void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab,
-                     const amrex::Real* plo, const amrex::Real* dx, amrex::Real dt)
+                     const amrex::Real* plo, const amrex::Real* dx)
 {
     if (common::pkernel_es == 3)
     {
-        collect_charge(aos, fab, Kernel3P(), plo, dx, dt); 
+        collect_charge(aos, fab, Kernel3P(), plo, dx);
     }
     else if (common::pkernel_es == 4)
     {
-        collect_charge(aos, fab, Kernel4P(), plo, dx, dt); 
+        collect_charge(aos, fab, Kernel4P(), plo, dx);
     }
     else if (common::pkernel_es == 6)
     {
-        collect_charge(aos, fab, Kernel6P(), plo, dx, dt); 
+        collect_charge(aos, fab, Kernel6P(), plo, dx);
     }
 }
 
