@@ -3004,7 +3004,7 @@ contains
     integer(c_int), pointer :: cell_parts(:)
     type(particle_t), pointer :: part
     type(paramplane_t), pointer :: surf
-    real(amrex_real) dxinv(3), dxesinv(3), onemdxf(3), ixf(3), diffav, distav, domsize(3), qm, diffinst, volinv
+    real(amrex_real) dxesinv(3), onemdxf(3), ixf(3), diffav, distav, domsize(3), qm, diffinst
 
     double precision, allocatable :: weights(:,:,:,:)
     integer, allocatable :: indicies(:,:,:,:,:)
@@ -3022,12 +3022,7 @@ contains
 
     domsize = phi - plo
 
-    dxinv = 1.d0/dx
-
     dxesinv = 1.d0/dxes
-
-    volinv = 1d0/(dxes(1)*dxes(2)*dxes(3))
-
 
     diffav = 0
     distav = 0

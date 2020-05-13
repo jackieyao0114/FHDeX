@@ -17,6 +17,8 @@
 #include <ib_functions_F.H>
 #include "rng_functions.H"
 
+#include "kernel_functions_K.H"
+
 #include <iostream>
 
 using namespace amrex;
@@ -578,14 +580,20 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadMarkers(
    }
 }
 
-AMREX_GPU_HOST_DEVICE AMREX_INLINE
-Real kernel_3p(Real r_in)
+AMREX_GPU_HOST_DEVICE AMREX_INLINE    
+Real kernel_3p (Real r_in)
 {
     Real kernel_3p;
 
     //internal variables
-    Real r1 = std::abs(r_in);
-    Real r2 = r1*r1;
+    Real r;
+    Real r1;
+    Real r2;
+ 
+    //initialize r
+    r = r_in;
+    r1 = std::abs(r_in);
+    r2 = r1*r1;
 
     if (r1 <= 0.5)
     {
@@ -639,60 +647,7 @@ Real kernel_4p(Real r_in)
 }
 
 AMREX_GPU_HOST_DEVICE AMREX_INLINE
-Real beta_kernel(Real r)
-{
-    Real beta;
-    Real K = 59.0/60 - std::sqrt(29.0)/20.0;
-
-    //pre-computed ratios
-    Real a = 9.0/4.0;
-    Real b = 3.0/2.0;
-    Real c = 22.0/3.0;
-    Real d = 7.0/3.0;
-
-    //NOTE: mistake in the paper: b*(K+r**2)*r -> b*(K+r**2)
-    //beta = a - b*(K+r**2)*r + (c-7*K)*r - d*r**3
-    beta = a - b*(K+(r*r)) + (c-7.0*K)*r - d*(r*r*r);
-
-    return beta;
-}
-
-AMREX_GPU_HOST_DEVICE AMREX_INLINE
-Real gamma_kernel(Real r)
-{
-    Real gamma;
-    Real K = 59.0/60 - std::sqrt(29.0)/20.0;
-
-    //pre-computed ratios
-    Real a = 11.0/32.0;
-    Real b = 3.0/32.0;
-    Real c = 1.0/72.0;
-    Real d = 1.0/18.0;
-
-    gamma = - a*r*r + b*(2*K+(r*r))*(r*r) + c*std::pow(((3*K-1)*r+(r*r*r)),2) + d*std::pow(((4-3*K)*r-(r*r*r)),2);
-
-    return gamma;
-}
-
-AMREX_GPU_HOST_DEVICE AMREX_INLINE
-Real phi1(Real r)
-{
-    Real phi1;
-    Real K = 59.0/60 - std::sqrt(29.0)/20.0;
-    Real sgn = (3.0/2.0 - K)/std::abs(3.0/2.0 - K);
-
-    //pre-computed ratios
-    Real alpha = 28.0;
-    Real inv_alpha = 1.0/(2.0*alpha);
-
-    phi1 = inv_alpha*( -beta_kernel(r) + sgn * std::sqrt(beta_kernel(r)*beta_kernel(r) - 4*alpha*gamma_kernel(r)) );
-
-    return phi1;
-}
-
-
-AMREX_GPU_HOST_DEVICE AMREX_INLINE
-Real kernel_6p(Real r_in)
+Real kernel_6p (Real r_in)
 {
     //The 6-point kernel function, based on the paper:
     //>*A Gaussian-like immersed-boundary kernel with three continuous derivatives and improved translational invariance*
@@ -758,7 +713,6 @@ Real kernel_6p(Real r_in)
 
     return kernel_6p;
 }
-
 
 template <typename StructReal, typename StructInt>
 void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernel(const Box& bx, 
