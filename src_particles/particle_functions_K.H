@@ -213,6 +213,56 @@ amrex::Real compute_p3m_force_mag (amrex::Real r, amrex::Real dx, amrex::Real dy
 }
 
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
+void force_function2 (      FhdParticleContainer::ParticleType& part1,
+                      const FhdParticleContainer::ParticleType& part2,
+                      const amrex::GpuArray<amrex::Real, 3>& domsize)
+{
+    using namespace amrex;
+    using common::permittivity;
+    using common::images;
+    
+    Real ee = (1.0/(permittivity*4*3.142));
+
+    Real dx0[3];
+    dx0[0] = part1.pos(0) - part2.pos(0);
+    dx0[1] = part1.pos(1) - part2.pos(1);
+    dx0[2] = part1.pos(2) - part2.pos(2);
+
+    int imag = (images == 0) ? 1 : images;
+    
+    Real maxdist = 0.99*amrex::min(imag * domsize[0],
+                                   imag * domsize[1],
+                                   imag * domsize[2]);
+
+    Real q1 = part1.rdata(FHD_realData::q);
+    Real q2 = part2.rdata(FHD_realData::q);
+    
+    for (int ii = -images; ii <= images; ++ii) {
+        for (int jj = -images; jj <= images; ++jj) {
+            for (int kk = -images; kk <= images; ++kk) {
+
+                Real dx[3];
+                dx[0] = dx0[0] - ii*domsize[0];
+                dx[1] = dx0[1] - jj*domsize[1];
+                dx[2] = dx0[2] - kk*domsize[2];
+
+                Real dr2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
+                if (dr2 != 0) //might find a more careful way of doing this
+                {
+                    Real rtdr2 = std::sqrt(dr2);
+                    if (rtdr2 < maxdist)
+                    {
+                        part1.rdata(FHD_realData::forcex) += ee*(dx[0]/rtdr2)*q1*q2/dr2;
+                        part1.rdata(FHD_realData::forcey) += ee*(dx[1]/rtdr2)*q1*q2/dr2;
+                        part1.rdata(FHD_realData::forcez) += ee*(dx[2]/rtdr2)*q1*q2/dr2;
+                    }
+                }
+            }
+        }
+    }
+}
+
+AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void repulsive_force (      FhdParticleContainer::ParticleType& part1,
                       const FhdParticleContainer::ParticleType& part2,
                       amrex::Real dx, amrex::Real dy, amrex::Real dz, amrex::Real dr2)

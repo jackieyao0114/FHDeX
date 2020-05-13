@@ -129,7 +129,7 @@ int                        common::poisson_bottom_verbose;
 int                        common::poisson_max_iter;
 
 amrex::Real                common::poisson_rel_tol;
-amrex::Real                common::permittivity;
+AMREX_GPU_MANAGED amrex::Real common::permittivity;
 amrex::Real                common::cut_off;
 amrex::Real                common::rmin;
 
@@ -151,7 +151,7 @@ int	                   common::zero_net_force;
 
 int                        common::crange;
 
-int                        common::images;
+AMREX_GPU_MANAGED int      common::images;
 amrex::Vector<amrex::Real> common::eamp;
 amrex::Vector<amrex::Real> common::efreq;
 amrex::Vector<amrex::Real> common::ephase;

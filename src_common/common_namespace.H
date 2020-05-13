@@ -200,7 +200,7 @@ namespace common {
     extern amrex::Vector<amrex::Real> mass;
     extern amrex::Vector<amrex::Real> nfrac;
 
-    extern amrex::Real                permittivity;
+    extern AMREX_GPU_MANAGED amrex::Real permittivity;
     extern amrex::Real                cut_off;
     extern amrex::Real                rmin;
     extern amrex::Vector<amrex::Real> eepsilon;
@@ -230,7 +230,7 @@ namespace common {
     extern int                        thermostat_tog;
     extern int                        zero_net_force;
 
-    extern int                        images;
+    extern AMREX_GPU_MANAGED int      images;
     extern amrex::Vector<amrex::Real> eamp;
     extern amrex::Vector<amrex::Real> efreq;
     extern amrex::Vector<amrex::Real> ephase;
