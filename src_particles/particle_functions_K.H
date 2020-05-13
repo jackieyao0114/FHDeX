@@ -650,7 +650,7 @@ void spread_op (amrex::Array4<amrex::Real> const& arr, F f,
 }
 
 template <typename F>
-void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab, F f,
+void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& charge, F f,
                      const amrex::Real* plo_in, const amrex::Real* dx_in)
 {
     using namespace amrex;
@@ -666,8 +666,8 @@ void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab, F f,
     const auto Np = aos.numParticles();
     const auto pstruct = aos().dataPtr();
 
-    auto arr = fab.array();
-    const IntVect nodal_flag = fab.box().type();
+    auto arr = charge.array();
+    const IntVect nodal_flag = charge.box().type();
     
     amrex::ParallelFor(Np, [=] AMREX_GPU_HOST_DEVICE (int ip) noexcept
     {
@@ -683,20 +683,20 @@ void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab, F f,
     });
 }
 
-void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab,
+void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& charge,
                      const amrex::Real* plo, const amrex::Real* dx)
 {
     if (common::pkernel_es == 3)
     {
-        collect_charge(aos, fab, Kernel3P(), plo, dx);
+        collect_charge(aos, charge, Kernel3P(), plo, dx);
     }
     else if (common::pkernel_es == 4)
     {
-        collect_charge(aos, fab, Kernel4P(), plo, dx);
+        collect_charge(aos, charge, Kernel4P(), plo, dx);
     }
     else if (common::pkernel_es == 6)
     {
-        collect_charge(aos, fab, Kernel6P(), plo, dx);
+        collect_charge(aos, charge, Kernel6P(), plo, dx);
     }
 }
 
