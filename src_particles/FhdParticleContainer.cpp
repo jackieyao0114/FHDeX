@@ -1368,8 +1368,7 @@ void FhdParticleContainer::collectFields(const Real dt, const Real* dxPotential,
         auto& particles = particle_tile.GetArrayOfStructs();
         const int np = particles.numParticles();
 
-        collect_charge(particles, chargeTemp[pti],
-                       ZFILL(plo), ZFILL(dx), ZFILL(geomP.ProbLo()), ZFILL(dxPotential), dt);
+        collect_charge(particles, chargeTemp[pti], ZFILL(geomP.ProbLo()), ZFILL(dxPotential), dt);
     }
 
     MultiFabPhysBCCharge(chargeTemp, geomP);

@@ -552,22 +552,16 @@ void compute_forces_nl (FhdParticleContainer::AoS& aos, int Np, int Nn,
 
 template <typename F>
 void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab, F f,
-                     const amrex::Real* plo_in, const amrex::Real* dx_in,
-                     const amrex::Real* ploes_in, const amrex::Real* dxes_in, amrex::Real dt)
+                     const amrex::Real* plo_in, const amrex::Real* dx_in, amrex::Real dt)
 {
     using namespace amrex;
     constexpr int ks = F::ks;
     
     GpuArray<Real, 3> plo = {plo_in[0], plo_in[1], plo_in[2]};
-    GpuArray<Real, 3> dx  = {dx_in[0],  dx_in[1],  dx_in[2] };
+    GpuArray<Real, 3> dx  = {dx_in[0],  dx_in[1],  dx_in[2] };    
+    GpuArray<Real, 3> dxi = {1.0/dx_in[0],  1.0/dx_in[1],  1.0/dx_in[2] };
 
-    GpuArray<Real, 3> ploes = {ploes_in[0], ploes_in[1], ploes_in[2]};
-    GpuArray<Real, 3> dxes  = {dxes_in[0],  dxes_in[1],  dxes_in[2] };    
-
-    GpuArray<Real, 3> dxi   = {1.0/dx_in[0]  ,  1.0/dx_in[1]  ,  1.0/dx_in[2]   };
-    GpuArray<Real, 3> dxesi = {1.0/dxes_in[0],  1.0/dxes_in[1],  1.0/dxes_in[2] };
-
-    Real volinv = 1.0/(dxes_in[0]*dxes_in[1]*dxes_in[2]);
+    Real volinv = 1.0/(dx_in[0]*dx_in[1]*dx_in[2]);
     Real permittivity = common::permittivity;
     
     const auto Np = aos.numParticles();
@@ -580,9 +574,9 @@ void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab, F f,
         FhdParticleContainer::ParticleType& p = pstruct[ip];
 
         Real fr[3];
-        fr[0] = (p.pos(0) - ploes[0]) * dxesi[0];
-        fr[1] = (p.pos(1) - ploes[1]) * dxesi[1];
-        fr[2] = (p.pos(2) - ploes[2]) * dxesi[2];
+        fr[0] = (p.pos(0) - plo[0]) * dxi[0];
+        fr[1] = (p.pos(1) - plo[1]) * dxi[1];
+        fr[2] = (p.pos(2) - plo[2]) * dxi[2];
 
         int fi[3];
         fi[0] = std::floor(fr[0]);
@@ -607,22 +601,22 @@ void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab, F f,
         Real wx[2*ks];
         for (int i = 0 ; i < 2*ks; ++i)
         {
-            Real xx = p.pos(0) - (fi[0] + i - (ks-1) + fn[0] + 0.5)*dxes[0] + ploes[0];
-            wx[i] = f(xx*dxesi[0]);
+            Real xx = p.pos(0) - (fi[0] + i - (ks-1) + fn[0] + 0.5)*dx[0] + plo[0];
+            wx[i] = f(xx*dxi[0]);
         }
         
         Real wy[2*ks];
         for (int i = 0 ; i < 2*ks; ++i)
         {
-            Real yy = p.pos(1) - (fi[1] + i - (ks-1) + fn[1] + 0.5)*dxes[1] + ploes[1];
-            wy[i] = f(yy*dxesi[1]);
+            Real yy = p.pos(1) - (fi[1] + i - (ks-1) + fn[1] + 0.5)*dx[1] + plo[1];
+            wy[i] = f(yy*dxi[1]);
         }
 
         Real wz[2*ks];
         for (int i = 0 ; i < 2*ks; ++i)
         {
-            Real zz = p.pos(2) - (fi[2] + i - (ks-1) + fn[2] + 0.5)*dxes[2] + ploes[2];
-            wz[i] = f(zz*dxesi[2]);
+            Real zz = p.pos(2) - (fi[2] + i - (ks-1) + fn[2] + 0.5)*dx[2] + plo[2];
+            wz[i] = f(zz*dxi[2]);
         }
 
         for (int k = 0 ; k < 2*ks; ++k) {
@@ -640,20 +634,19 @@ void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab, F f,
 }
 
 void collect_charge (FhdParticleContainer::AoS& aos, FArrayBox& fab,
-                     const amrex::Real* plo, const amrex::Real* dx,
-                     const amrex::Real* ploes, const amrex::Real* dxes, amrex::Real dt)
+                     const amrex::Real* plo, const amrex::Real* dx, amrex::Real dt)
 {
     if (common::pkernel_es == 3)
     {
-        collect_charge(aos, fab, Kernel3P(), plo, dx, ploes, dxes, dt); 
+        collect_charge(aos, fab, Kernel3P(), plo, dx, dt); 
     }
     else if (common::pkernel_es == 4)
     {
-        collect_charge(aos, fab, Kernel4P(), plo, dx, ploes, dxes, dt); 
+        collect_charge(aos, fab, Kernel4P(), plo, dx, dt); 
     }
     else if (common::pkernel_es == 6)
     {
-        collect_charge(aos, fab, Kernel6P(), plo, dx, ploes, dxes, dt); 
+        collect_charge(aos, fab, Kernel6P(), plo, dx, dt); 
     }
 }
 
