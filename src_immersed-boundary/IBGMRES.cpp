@@ -648,11 +648,13 @@ void IBMPrecon(const std::array<MultiFab, AMREX_SPACEDIM> & b_u, const MultiFab 
     std::array< MultiFab, AMREX_SPACEDIM > alphainv_fc;
     std::array< MultiFab, AMREX_SPACEDIM > one_fab_fc;
     std::array< MultiFab, AMREX_SPACEDIM > zero_fab_fc;
+    std::array< MultiFab, AMREX_SPACEDIM > gradp;
 
     for (int d=0; d<AMREX_SPACEDIM; ++d) {
         alphainv_fc[d].define(convert(ba, nodal_flag_dir[d]), dmap, 1, 0);
          one_fab_fc[d].define(convert(ba, nodal_flag_dir[d]), dmap, 1, 0);
         zero_fab_fc[d].define(convert(ba, nodal_flag_dir[d]), dmap, 1, 0);
+              gradp[d].define(convert(ba, nodal_flag_dir[d]), dmap, 1, 0);
 
         // set alphainv_fc to 1/alpha_fc
         // set one_fab_fc to 1
@@ -758,7 +760,7 @@ void IBMPrecon(const std::array<MultiFab, AMREX_SPACEDIM> & b_u, const MultiFab 
         MacProj(alphainv_fc, mac_rhs, phi, geom);
 
         // x_u = x_u^star - (alpha I)^-1 grad Phi ...... x_u = A^{-1}g - GLp^{-1}mac_rhs
-        SubtractWeightedGradP(x_u, alphainv_fc, phi, geom);
+        SubtractWeightedGradP(x_u, alphainv_fc, phi, gradp, geom);
 
 
         /************************************************************************
@@ -789,7 +791,7 @@ void IBMPrecon(const std::array<MultiFab, AMREX_SPACEDIM> & b_u, const MultiFab 
             Gphi[d].setVal(0.);
         }
 
-        SubtractWeightedGradP(Gphi, alphainv_fc, phi, geom);
+        SubtractWeightedGradP(Gphi, alphainv_fc, phi, gradp, geom);
 
         for (int d=0; d<AMREX_SPACEDIM; ++d)
             Gphi[d].FillBoundary(geom.periodicity());
@@ -981,7 +983,7 @@ void IBMPrecon(const std::array<MultiFab, AMREX_SPACEDIM> & b_u, const MultiFab 
         MacProj(alphainv_fc, JLS_P_rhs, JLS_P, geom);
 
         // x_u = x_u^star - (alpha I)^-1 grad Phi ...... x_u = A^{-1}g - GLp^{-1}mac_rhs
-        SubtractWeightedGradP(JLS_V, alphainv_fc, JLS_P, geom);
+        SubtractWeightedGradP(JLS_V, alphainv_fc, JLS_P, gradp, geom);
 
         for (int d=0; d<AMREX_SPACEDIM; ++d)
             JLS_V[d].FillBoundary(geom.periodicity());
@@ -1016,7 +1018,7 @@ void IBMPrecon(const std::array<MultiFab, AMREX_SPACEDIM> & b_u, const MultiFab 
                 x_p.mult(-1., 0, 1, 0);
             } else {
                 // first set x_p = -L_alpha Phi .... x_p = L_alpha Lp^{-1}(DA^{-1}g + h)
-                CCApplyOp(phi, x_p, zero_fab, alphainv_fc, geom);
+                CCApplyNegLap(phi, x_p, alphainv_fc, geom);
             }
 
             if ( abs(visc_type) == 1 || abs(visc_type) == 2) {

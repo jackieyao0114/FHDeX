@@ -37,7 +37,6 @@ void MacProj(const std::array<MultiFab, AMREX_SPACEDIM>& alphainv_fc,
         if (geom.isPeriodic(i)) {
             lo_mlmg_bc[i] = hi_mlmg_bc[i] = LinOpBCType::Periodic;
         } else {
-            // Abort("ApplyPrecon only works for periodic");
             lo_mlmg_bc[i] = hi_mlmg_bc[i] = LinOpBCType::Neumann;
         }
     }
@@ -66,17 +65,13 @@ void MacProj(const std::array<MultiFab, AMREX_SPACEDIM>& alphainv_fc,
 void SubtractWeightedGradP(std::array<MultiFab, AMREX_SPACEDIM>& x_u,
                            const std::array<MultiFab, AMREX_SPACEDIM>& alphainv_fc,
                            MultiFab& phi,
+                           std::array<MultiFab, AMREX_SPACEDIM>& gradp,
                            const Geometry& geom)
 {
     BL_PROFILE_VAR("SubtractWeightedGradP()",SubtractWeightedGradP);
     
     BoxArray ba = phi.boxArray();
     DistributionMapping dmap = phi.DistributionMap();
-
-    std::array< MultiFab, AMREX_SPACEDIM > gradp;
-    AMREX_D_TERM(gradp[0].define(convert(ba,nodal_flag_x), dmap, 1, 0);,
-                 gradp[1].define(convert(ba,nodal_flag_y), dmap, 1, 0);,
-                 gradp[2].define(convert(ba,nodal_flag_z), dmap, 1, 0););
 
     ComputeGrad(phi,gradp,0,0,1,0,geom);
 
@@ -86,11 +81,10 @@ void SubtractWeightedGradP(std::array<MultiFab, AMREX_SPACEDIM>& x_u,
     }
 }
 
-void CCApplyOp(MultiFab& phi,
-               MultiFab& Lphi,
-               const MultiFab& alpha,
-               const std::array<MultiFab, AMREX_SPACEDIM>& beta_fc,
-               const Geometry& geom)
+void CCApplyNegLap(MultiFab& phi,
+                   MultiFab& Lphi,
+                   const std::array<MultiFab, AMREX_SPACEDIM>& beta_fc,
+                   const Geometry& geom)
 {
     BL_PROFILE_VAR("CCApplyOp()",CCApplyOp);
     
@@ -118,14 +112,13 @@ void CCApplyOp(MultiFab& phi,
             lo_mlmg_bc[i] = hi_mlmg_bc[i] = LinOpBCType::Periodic;
         }
         else {
-            Abort("ApplyPrecon only works for periodic");
+            Abort("CCApplyNegLap only works for periodic");
         }
     }
     mlabec.setDomainBC(lo_mlmg_bc,hi_mlmg_bc);
     mlabec.setLevelBC(lev, &phi);
 
     // coefficients for solver
-    mlabec.setACoeffs(lev,alpha);
     mlabec.setBCoeffs(lev,amrex::GetArrOfConstPtrs(beta_fc));
 
     MLMG mlmg(mlabec);

@@ -1,56 +1,41 @@
-#include "common_functions.H"
-
 #include "gmres_functions.H"
 
+Precon::Precon() {}
 
-void ApplyPrecon(const std::array<MultiFab, AMREX_SPACEDIM> & b_u, const MultiFab & b_p,
-                 std::array<MultiFab, AMREX_SPACEDIM> & x_u, MultiFab & x_p,
-                 const std::array<MultiFab, AMREX_SPACEDIM> & alpha_fc,
-                 const MultiFab & beta, const std::array<MultiFab, NUM_EDGE> & beta_ed,
-                 const MultiFab & gamma,
-                 const Real & theta_alpha,
-                 const Geometry & geom)
+void Precon::Define(const BoxArray& ba_in,
+                    const DistributionMapping& dmap_in) {
+
+    BL_PROFILE_VAR("Precon::Define()",Precon);
+
+    phi.define    (ba_in,dmap_in,1,1);
+    mac_rhs.define(ba_in,dmap_in,1,0);
+
+    for (int d=0; d<AMREX_SPACEDIM; d++) {
+        gradp[d].define(convert(ba_in, nodal_flag_dir[d]), dmap_in, 1, 0);
+    }
+
+}    
+
+void Precon::Apply(const std::array<MultiFab, AMREX_SPACEDIM> & b_u,
+                   const MultiFab & b_p,
+                   std::array<MultiFab, AMREX_SPACEDIM> & x_u,
+                   MultiFab & x_p,
+                   const std::array<MultiFab, AMREX_SPACEDIM> & alpha_fc,
+                   const std::array<MultiFab, AMREX_SPACEDIM> & alphainv_fc,
+                   const MultiFab & beta, const std::array<MultiFab, NUM_EDGE> & beta_ed,
+                   const MultiFab & gamma,
+                   const Real & theta_alpha,
+                   const Geometry & geom,
+                   StagMGSolver& StagSolver)
 {
 
-    BL_PROFILE_VAR("ApplyPrecon()",ApplyPrecon);
+    BL_PROFILE_VAR("Precon::Apply()",Precon_Apply);
 
     BoxArray ba = b_p.boxArray();
     DistributionMapping dmap = b_p.DistributionMap();
 
     Real         mean_val_pres;
     Vector<Real> mean_val_umac(AMREX_SPACEDIM);
-
-
-    MultiFab phi     (ba,dmap,1,1);
-    MultiFab mac_rhs (ba,dmap,1,0);
-    MultiFab zero_fab(ba,dmap,1,0);
-    MultiFab x_p_tmp (ba,dmap,1,1);
-
-    // set zero_fab_fc to 0
-    zero_fab.setVal(0.);
-
-    // build alphainv_fc, one_fab_fc, zero_fab_fc, and b_u_tmp
-    std::array< MultiFab, AMREX_SPACEDIM > alphainv_fc;
-    std::array< MultiFab, AMREX_SPACEDIM > one_fab_fc;
-    std::array< MultiFab, AMREX_SPACEDIM > zero_fab_fc;
-    std::array< MultiFab, AMREX_SPACEDIM > b_u_tmp;
-
-    for (int d=0; d<AMREX_SPACEDIM; ++d) {
-        alphainv_fc[d].define(convert(ba, nodal_flag_dir[d]), dmap, 1, 0);
-        one_fab_fc[d].define(convert(ba, nodal_flag_dir[d]), dmap, 1, 0);
-        zero_fab_fc[d].define(convert(ba, nodal_flag_dir[d]), dmap, 1, 0);
-        b_u_tmp[d].define(convert(ba, nodal_flag_dir[d]), dmap, 1, 0);
-    }
-
-    // set alphainv_fc to 1/alpha_fc
-    // set one_fab_fc to 1
-    // set zero_fab_fc to 0
-    for (int d=0; d<AMREX_SPACEDIM; ++d) {
-        alphainv_fc[d].setVal(1.);
-        alphainv_fc[d].divide(alpha_fc[d],0,1,0);
-        one_fab_fc[d].setVal(1.);
-        zero_fab_fc[d].setVal(0.);
-    }
 
     // set the initial guess for Phi in the Poisson solve to 0
     // set x_u = 0 as initial guess
@@ -75,7 +60,7 @@ void ApplyPrecon(const std::array<MultiFab, AMREX_SPACEDIM> & b_u, const MultiFa
         ////////////////////
 
         // x_u^star = A^{-1} b_u
-        StagMGSolver(alpha_fc,beta,beta_ed,gamma,x_u,b_u,theta_alpha,geom);
+        StagSolver.Solve(alpha_fc,beta,beta_ed,gamma,x_u,b_u,theta_alpha);
 
         ////////////////////
         // STEP 2: Construct RHS for pressure Poisson problem
@@ -96,7 +81,7 @@ void ApplyPrecon(const std::array<MultiFab, AMREX_SPACEDIM> & b_u, const MultiFa
         MacProj(alphainv_fc,mac_rhs,phi,geom);
 
         // x_u = x_u^star - (alpha I)^-1 grad Phi
-        SubtractWeightedGradP(x_u,alphainv_fc,phi,geom);
+        SubtractWeightedGradP(x_u,alphainv_fc,phi,gradp,geom);
 
         ////////////////////
         // STEP 4: Compute x_p by applying the Schur complement approximation
@@ -113,7 +98,7 @@ void ApplyPrecon(const std::array<MultiFab, AMREX_SPACEDIM> & b_u, const MultiFa
             }
             else {
                 // first set x_p = -L_alpha Phi
-                CCApplyOp(phi,x_p,zero_fab,alphainv_fc,geom);
+                CCApplyNegLap(phi,x_p,alphainv_fc,geom);
             }
 
             if ( abs(visc_type) == 1 || abs(visc_type) == 2) {
