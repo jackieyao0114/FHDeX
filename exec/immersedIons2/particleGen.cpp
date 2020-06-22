@@ -46,10 +46,10 @@ void FhdParticleContainer::InitParticles(species* particleInfo, const Real* dxp)
 //                    p.pos(2) = 3.103479106e-07;
 //#endif
 
-                    p.pos(0) = prob_lo[0] + 0.4*(prob_hi[0]-prob_lo[0]);
-                    p.pos(1) = prob_lo[1] + 0.4*(prob_hi[1]-prob_lo[1]);
+                    p.pos(0) = prob_lo[0] + 0.45*(prob_hi[0]-prob_lo[0]);
+                    p.pos(1) = prob_lo[1] + 0.45*(prob_hi[1]-prob_lo[1]);
 #if (BL_SPACEDIM == 3)
-                    p.pos(2) = prob_lo[2] + 0.4*(prob_hi[2]-prob_lo[2]);
+                    p.pos(2) = prob_lo[2] + 0.45*(prob_hi[2]-prob_lo[2]);
 #endif
 
 

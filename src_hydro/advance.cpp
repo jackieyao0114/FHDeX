@@ -3,6 +3,8 @@
 
 #include "common_functions.H"
 
+#include "AMReX_VisMF.H"
+
 
 #include "gmres_functions.H"
 
@@ -51,13 +53,19 @@ void advanceStokes(std::array< MultiFab, AMREX_SPACEDIM >& umac,
         MultiFab::Add(gmres_rhs_u[d], sourceTerms[d], 0, 0, 1, 0);
     }
 
+//*(prob_hi[0]-prob_lo[0])*(prob_hi[1]-prob_lo[1])*(prob_hi[2]-prob_lo[2])
 
+    const Real* dx = geom.CellSize();
+    Real cellVol = dx[0]*dx[0]*dx[0];
 
     if (zero_net_force == 1)
     {
         Vector<Real> mean_stress_umac(AMREX_SPACEDIM);
+        Vector<Real> post_stress_umac(AMREX_SPACEDIM);
 
         SumStag(geom,gmres_rhs_u,0,mean_stress_umac,true);
+
+        VisMF::Write(gmres_rhs_u[2],"a_rhs");
 
         Print() << "correcting mean force: " << mean_stress_umac[0]*(prob_hi[0]-prob_lo[0])*(prob_hi[1]-prob_lo[1])*(prob_hi[2]-prob_lo[2]);
 
@@ -67,10 +75,18 @@ void advanceStokes(std::array< MultiFab, AMREX_SPACEDIM >& umac,
 
         Print() << "\n";
 
-        Print() << "test force: " << sourceTerms[0].sum()*(prob_hi[0]-prob_lo[0])*(prob_hi[1]-prob_lo[1])*(prob_hi[2]-prob_lo[2]);
+        Print() << "source: " << sourceTerms[0].sum()*cellVol;
 
         for (int d=1; d<AMREX_SPACEDIM; ++d) {
-            Print() << ", " << sourceTerms[d].sum()*(prob_hi[0]-prob_lo[0])*(prob_hi[1]-prob_lo[1])*(prob_hi[2]-prob_lo[2]);
+            Print() << ", " << sourceTerms[d].sum()*cellVol;
+        }
+
+        Print() << "\n";
+
+        Print() << "rhs pre: " << gmres_rhs_u[0].sum()*cellVol;
+
+        for (int d=1; d<AMREX_SPACEDIM; ++d) {
+            Print() << ", " << gmres_rhs_u[d].sum()*cellVol;
         }
 
         Print() << "\n";
@@ -78,8 +94,21 @@ void advanceStokes(std::array< MultiFab, AMREX_SPACEDIM >& umac,
         for (int d=0; d<AMREX_SPACEDIM; ++d) {
             if (geom.isPeriodic(d)) {
                 gmres_rhs_u[d].plus(-mean_stress_umac[d],0,1,0);
+                //gmres_rhs_u[d].FillBoundary(geom.periodicity());
             }
         }
+
+        SumStag(geom,gmres_rhs_u,0,post_stress_umac,true);
+
+        Print() << "rhs post: " << post_stress_umac[0]*cellVol;
+
+        for (int d=1; d<AMREX_SPACEDIM; ++d) {
+            Print() << ", " << post_stress_umac[d]*cellVol;
+        }
+
+        Print() << "\n";
+
+
     }
       
     // call GMRES

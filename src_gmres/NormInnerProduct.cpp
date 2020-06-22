@@ -33,6 +33,8 @@ void SumStag(const Geometry& geom,
       int xlo = bx.smallEnd(0);
       int xhi = bx.bigEnd(0);
 
+//      Print() << "lohi: " << xlo << ", " << xhi << "\n";
+
       reduce_op.eval(bx, reduce_datax,
       [=] AMREX_GPU_DEVICE (int i, int j, int k) -> ReduceTuple
       {

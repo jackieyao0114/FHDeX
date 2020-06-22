@@ -1761,7 +1761,7 @@ contains
        enddo
     enddo
 
-    !print *, "Spread1 ", spreadcheck/volinv
+    print *, "Spread1 ", spreadcheck*(prob_hi(1)-prob_lo(1))*(prob_hi(2)-prob_lo(2))*(prob_hi(3)-prob_lo(3))
 
     spreadcheck = 0;
 
@@ -1777,7 +1777,7 @@ contains
     !  part => particles(1)
     ! part2 => particles(2)
 
-    !print *, "Spread2 ", spreadcheck
+    print *, "Spread2 ", spreadcheck*(prob_hi(1)-prob_lo(1))*(prob_hi(2)-prob_lo(2))*(prob_hi(3)-prob_lo(3))
 
   end subroutine spread_op
 
@@ -2832,7 +2832,7 @@ contains
     !  part => particles(1)
     ! part2 => particles(2)
 
-    !print *, "SOURCE1:", tempvel(3)*(prob_hi(1)-prob_lo(1))*(prob_hi(2)-prob_lo(2))*(prob_hi(3)-prob_lo(3))
+    print *, "SOURCE1:", tempvel(3)*(prob_hi(1)-prob_lo(1))*(prob_hi(2)-prob_lo(2))*(prob_hi(3)-prob_lo(3))
 
        call spread_op(weights, indicies, &
             sourcex, sourcexlo, sourcexhi, &
@@ -2860,7 +2860,7 @@ contains
     !  part => particles(1)
     ! part2 => particles(2)
 
-!    print *, "SOURCE2:", tempvel(3)*(prob_hi(1)-prob_lo(1))*(prob_hi(2)-prob_lo(2))*(prob_hi(3)-prob_lo(3))
+    print *, "SOURCE2:", tempvel(3)*(prob_hi(1)-prob_lo(1))*(prob_hi(2)-prob_lo(2))*(prob_hi(3)-prob_lo(3))
     !print *, "SOURCE2:", tempvel(3)
 
     !call set_pos(part, part2,dxe,part%drag_factor)
