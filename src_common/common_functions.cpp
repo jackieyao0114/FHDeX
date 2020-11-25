@@ -92,6 +92,8 @@ void InitializeCommonNamespace() {
 
     eepsilon.resize(MAX_SPECIES);
     sigma.resize(MAX_SPECIES);
+    eepsilon_wall.resize(MAX_SPECIES);
+    sigma_wall.resize(MAX_SPECIES);
     qval.resize(MAX_SPECIES);
 
     diff.resize(MAX_SPECIES);
@@ -143,7 +145,8 @@ void InitializeCommonNamespace() {
                                 p_int_tog.dataPtr(), &particle_neff,
                                 particle_n0.dataPtr(), mass.dataPtr(), nfrac.dataPtr(),
                                 &permittivity,
-                                &cut_off,&rmin, eepsilon.dataPtr(), sigma.dataPtr(),
+                                &cut_off,&rmin, 
+                                eepsilon.dataPtr(), sigma.dataPtr(), eepsilon_wall.dataPtr(), sigma_wall.dataPtr(),
                                 &poisson_verbose, &poisson_bottom_verbose, &poisson_max_iter,
                                 &poisson_rel_tol, &particle_grid_refine, &es_grid_refine,
                                 diff.dataPtr(), &all_dry, &fluid_tog, &es_tog, &drag_tog, &move_tog, &rfd_tog,

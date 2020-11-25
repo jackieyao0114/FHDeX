@@ -123,6 +123,8 @@ amrex::Vector<amrex::Real> common::nfrac;
 
 amrex::Vector<amrex::Real> common::eepsilon;
 amrex::Vector<amrex::Real> common::sigma;
+amrex::Vector<amrex::Real> common::eepsilon_wall;
+amrex::Vector<amrex::Real> common::sigma_wall;
 
 int                        common::poisson_verbose;
 int                        common::poisson_bottom_verbose;

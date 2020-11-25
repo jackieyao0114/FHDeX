@@ -205,6 +205,8 @@ namespace common {
     extern amrex::Real                rmin;
     extern amrex::Vector<amrex::Real> eepsilon;
     extern amrex::Vector<amrex::Real> sigma;
+    extern amrex::Vector<amrex::Real> eepsilon_wall;
+    extern amrex::Vector<amrex::Real> sigma_wall;
 
     extern int                        poisson_verbose;
     extern int                        poisson_bottom_verbose;

@@ -423,6 +423,8 @@ void main_driver(const char* argv)
 
         ionParticle[i].sigma = sigma[i];
         ionParticle[i].eepsilon = eepsilon[i];
+        ionParticle[i].sigma_wall = sigma_wall[i];
+        ionParticle[i].eepsilon_wall = eepsilon_wall[i];
 
         // round up particles so there are the same number in each box;
         // we have to divide them into whole numbers of particles somehow. 
@@ -675,7 +677,7 @@ void main_driver(const char* argv)
 
     if (restart < 0 && particle_restart < 0) {
         // create particles
-        if (sr_tog == 4) {
+        if ((sr_tog == 4) || (sr_tog == 6)) {
             particles.InitParticlesFromFile(ionParticle, dxp);
         }
         else {

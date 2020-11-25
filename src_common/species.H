@@ -24,6 +24,8 @@ typedef struct {
   double wetDiff;
   double sigma;
   double eepsilon;
+  double sigma_wall;
+  double eepsilon_wall;
 
 } species;
 

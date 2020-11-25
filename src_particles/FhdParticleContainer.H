@@ -69,6 +69,8 @@ struct FHD_realData {
         totalDiff,
         sigma,
         eepsilon,
+        sigma_wall,
+        eepsilon_wall,
         potential,
 	    p3m_radius,
         count    // Awesome little trick! (only works if first field is 0)

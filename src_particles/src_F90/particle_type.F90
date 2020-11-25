@@ -41,6 +41,8 @@ module cell_sorted_particle_module
      real(amrex_particle_real) :: total_diff
      real(amrex_particle_real) :: sigma
      real(amrex_particle_real) :: eepsilon
+     real(amrex_particle_real) :: sigma_wall
+     real(amrex_particle_real) :: eepsilon_wall
      real(amrex_particle_real) :: potential
      real(amrex_particle_real) :: p3m_radius
 

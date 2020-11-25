@@ -32,6 +32,8 @@ module species_type_module
      real(amrex_real) :: wet_diff
      real(amrex_real) :: sigma
      real(amrex_real) :: eepsilon
+     real(amrex_real) :: sigma_wall
+     real(amrex_real) :: eepsilon_wall
 
   end type species_t
 

@@ -156,7 +156,7 @@ void WritePlotFile(int step,
     ccount = 46+2*nspecies;
     for(int i=0;i<nspecies;i++)
     {
-        std::string specname = Concatenate("densityMeanSpecies",i);
+        std::string specname = Concatenate("densityVarSpecies",i);
         cvarNames[ccount+i]= specname;
     }
 
@@ -265,6 +265,8 @@ void WritePlotFile(int step,
     real_comp_names.push_back("totalDiff");
     real_comp_names.push_back("sigma");
     real_comp_names.push_back("eepsilon");
+    real_comp_names.push_back("sigma_wall");
+    real_comp_names.push_back("eepsilon_wall");
     real_comp_names.push_back("potential");
     real_comp_names.push_back("p3m_radius");
 //    real_comp_names.push_back("count");
@@ -321,6 +323,8 @@ void WritePlotFile(int step,
         0, // totalDiff
         0, // sigma
         0, // eepsilon
+        0, // sigma_wall
+        0, // eepsilon_wall
         0, // potential
         0  // p3m_radius
     };

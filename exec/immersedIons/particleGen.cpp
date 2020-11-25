@@ -265,6 +265,8 @@ void FhdParticleContainer::InitParticlesFromFile(species* particleInfo, const Re
 
                 p.rdata(FHD_realData::sigma) = particleInfo[i_spec].sigma;
                 p.rdata(FHD_realData::eepsilon) = particleInfo[i_spec].eepsilon;
+                p.rdata(FHD_realData::sigma_wall) = particleInfo[i_spec].sigma_wall;
+                p.rdata(FHD_realData::eepsilon_wall) = particleInfo[i_spec].eepsilon_wall;
 
                 p.idata(FHD_intData::species) = i_spec +1;
                 p.rdata(FHD_realData::potential) = 0;                 
@@ -272,7 +274,7 @@ void FhdParticleContainer::InitParticlesFromFile(species* particleInfo, const Re
                 // set distance for which we do direct, short range coulomb force calculation
                 // in p3m to be 6.5*dx_poisson_grid
 
-                p.rdata(FHD_realData::p3m_radius) = (pkernel_es + 0.5)*dxp[0];
+                p.rdata(FHD_realData::p3m_radius) = (pkernel_es + 0.5)*dxp[0]*2.39;
 
                 particle_tile.push_back(p);
 

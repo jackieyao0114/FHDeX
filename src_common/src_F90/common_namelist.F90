@@ -139,6 +139,8 @@ module common_namelist_module
   double precision,   save :: rmin
   double precision,   save :: eepsilon(MAX_SPECIES)
   double precision,   save :: sigma(MAX_SPECIES)
+  double precision,   save :: eepsilon_wall(MAX_SPECIES)
+  double precision,   save :: sigma_wall(MAX_SPECIES)
   
   integer,            save :: poisson_verbose
   integer,            save :: poisson_bottom_verbose
@@ -341,6 +343,8 @@ module common_namelist_module
   namelist /common/ rmin
   namelist /common/ eepsilon
   namelist /common/ sigma
+  namelist /common/ eepsilon_wall
+  namelist /common/ sigma_wall
   
   namelist /common/ poisson_verbose
   namelist /common/ poisson_bottom_verbose
@@ -578,7 +582,7 @@ contains
                                          particle_placement_in, particle_count_in, p_move_tog_in, &
                                          p_force_tog_in, p_int_tog_in, particle_neff_in,&
                                          particle_n0_in, mass_in, nfrac_in, permittivity_in, &
-                                         cut_off_in, rmin_in, eepsilon_in, sigma_in, poisson_verbose_in, &
+                                         cut_off_in, rmin_in, eepsilon_in, sigma_in, eepsilon_wall_in, sigma_wall_in, poisson_verbose_in, &
                                          poisson_bottom_verbose_in, poisson_max_iter_in, poisson_rel_tol_in, &
                                          particle_grid_refine_in, es_grid_refine_in, diff_in, all_dry_in, &
                                          fluid_tog_in, es_tog_in, drag_tog_in, move_tog_in, rfd_tog_in, &
@@ -703,6 +707,8 @@ contains
 
     double precision,       intent(inout) :: eepsilon_in(MAX_SPECIES)
     double precision,       intent(inout) :: sigma_in(MAX_SPECIES)
+    double precision,       intent(inout) :: eepsilon_wall_in(MAX_SPECIES)
+    double precision,       intent(inout) :: sigma_wall_in(MAX_SPECIES)
     double precision,       intent(inout) :: permittivity_in
     double precision,       intent(inout) :: cut_off_in
     double precision,       intent(inout) :: rmin_in
@@ -862,6 +868,8 @@ contains
     rmin_in = rmin
     eepsilon_in = eepsilon
     sigma_in = sigma
+    eepsilon_wall_in = eepsilon_wall
+    sigma_wall_in = sigma_wall
 
     particle_grid_refine_in = particle_grid_refine
     es_grid_refine_in = es_grid_refine
