@@ -68,7 +68,7 @@ void esSolve(MultiFab& potential, MultiFab& charge,
         // this forces the solver to NOT enforce solvability
         // thus if there are Neumann conditions on phi they must
         // be correct or the Poisson solver won't converge
-//        linop.setEnforceSingularSolvable(false);
+        linop.setEnforceSingularSolvable(false);
 
         //Multi Level Multi Grid
         MLMG mlmg(linop);
