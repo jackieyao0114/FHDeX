@@ -313,8 +313,8 @@ void repulsive_force_wall126 (   FhdParticleContainer::ParticleType& part1,
 
     const Real eps1 = part1.rdata(FHD_realData::eepsilon_wall);
     const Real sig1 = part1.rdata(FHD_realData::sigma_wall);
-    const Real fac1 = std::pow(sig1/4.0, 12);
-    const Real fac2 = std::pow(sig1/4.0, 6);
+    const Real fac1 = std::pow(sig1/2.0, 12);
+    const Real fac2 = std::pow(sig1/2.0, 6);
     const Real ff = eps1*4*(1./(dr2*dr2*dr2*dr2))*(-12*fac1/(dr2*dr2*dr2) + 6*fac2);
 
     part1.rdata(FHD_realData::forcex) -= dx*ff;
@@ -719,9 +719,9 @@ void compute_forces_nl_gpu (FhdParticleContainer::AoS& aos, int Np, int Nn,
                 const Real r2min = amrex::max(r2, rmin*rmin);
                 //const Real r = sqrt(r2);
 
-                const Real cut93 = 1.20094*p1.rdata(FHD_realData::sigma)/4.0; //LJ93 cutoff for repulsive only
-                const Real cutshort126 = 1.122*p1.rdata(FHD_realData::sigma_wall)/4.0; // LJ126 cutoff for repulsive only
-                const Real cutlong126 = 2.5*p1.rdata(FHD_realData::sigma_wall)/4.0; // LJ126 cutoff for attractive + repulsive LJ
+                const Real cut93 = 1.20094*p1.rdata(FHD_realData::sigma)/2.0; //LJ93 cutoff for repulsive only
+                const Real cutshort126 = 1.122*p1.rdata(FHD_realData::sigma_wall)/2.0; // LJ126 cutoff for repulsive only
+                const Real cutlong126 = 2.5*p1.rdata(FHD_realData::sigma_wall)/2.0; // LJ126 cutoff for attractive + repulsive LJ
 
                 if ((r2 < cut93*cut93) && (sr_tog == 2) ) 
                 {
@@ -756,9 +756,9 @@ void compute_forces_nl_gpu (FhdParticleContainer::AoS& aos, int Np, int Nn,
                 const Real r2min = amrex::max(r2, rmin*rmin);
                 //const Real r = sqrt(r2);
 
-                const Real cut93 = 1.20094*p1.rdata(FHD_realData::sigma)/4.0; //LJ93 cutoff for repulsive only
-                const Real cutshort126 = 1.122*p1.rdata(FHD_realData::sigma_wall)/4.0; // LJ126 cutoff for repulsive only
-                const Real cutlong126 = 2.5*p1.rdata(FHD_realData::sigma_wall)/4.0; // LJ126 cutoff for attractive + repulsive LJ
+                const Real cut93 = 1.20094*p1.rdata(FHD_realData::sigma)/2.0; //LJ93 cutoff for repulsive only
+                const Real cutshort126 = 1.122*p1.rdata(FHD_realData::sigma_wall)/2.0; // LJ126 cutoff for repulsive only
+                const Real cutlong126 = 2.5*p1.rdata(FHD_realData::sigma_wall)/2.0; // LJ126 cutoff for attractive + repulsive LJ
 
                 if ((r2 < cut93*cut93) && (sr_tog == 2) ) 
                 {
@@ -787,16 +787,17 @@ void compute_forces_nl_gpu (FhdParticleContainer::AoS& aos, int Np, int Nn,
                 FhdParticleContainer::ParticleType& p1 = pstruct[i];
 
                 const Real dx = 0;
-                const Real dy = p1.pos(1) - plo[1];
+                //const Real dy = p1.pos(1) - plo[1];
+                const Real dy = p1.pos(1) - (plo[1] - 4.78e-8); // for Freund wall effect
                 const Real dz = 0;
 
                 const Real r2 = dy*dy;
                 const Real r2min = amrex::max(r2, rmin*rmin);
                 //const Real r = sqrt(r2);
 
-                const Real cut93 = 1.20094*p1.rdata(FHD_realData::sigma)/4.0; //LJ93 cutoff for repulsive only
-                const Real cutshort126 = 1.122*p1.rdata(FHD_realData::sigma_wall)/4.0; // LJ126 cutoff for repulsive only
-                const Real cutlong126 = 2.5*p1.rdata(FHD_realData::sigma_wall)/4.0; // LJ126 cutoff for attractive + repulsive LJ
+                const Real cut93 = 1.20094*p1.rdata(FHD_realData::sigma)/2.0; //LJ93 cutoff for repulsive only
+                const Real cutshort126 = 1.122*p1.rdata(FHD_realData::sigma_wall)/2.0; // LJ126 cutoff for repulsive only
+                const Real cutlong126 = 2.5*p1.rdata(FHD_realData::sigma_wall)/2.0; // LJ126 cutoff for attractive + repulsive LJ
 
                 if ((r2 < cut93*cut93) && (sr_tog == 2) ) 
                 {
@@ -825,16 +826,17 @@ void compute_forces_nl_gpu (FhdParticleContainer::AoS& aos, int Np, int Nn,
                 FhdParticleContainer::ParticleType& p1 = pstruct[i];
 
                 const Real dx = 0;
-                const Real dy = p1.pos(1) - phi[1];
+                //const Real dy = p1.pos(1) - phi[1];
+                const Real dy = p1.pos(1) - (phi[1] + 4.78e-8); // for Freund wall effect
                 const Real dz = 0;
 
                 const Real r2 = dy*dy;
                 const Real r2min = amrex::max(r2, rmin*rmin);
                 //const Real r = sqrt(r2);
 
-                const Real cut93 = 1.20094*p1.rdata(FHD_realData::sigma)/4.0; //LJ93 cutoff for repulsive only
-                const Real cutshort126 = 1.122*p1.rdata(FHD_realData::sigma_wall)/4.0; // LJ126 cutoff for repulsive only
-                const Real cutlong126 = 2.5*p1.rdata(FHD_realData::sigma_wall)/4.0; // LJ126 cutoff for attractive + repulsive LJ
+                const Real cut93 = 1.20094*p1.rdata(FHD_realData::sigma)/2.0; //LJ93 cutoff for repulsive only
+                const Real cutshort126 = 1.122*p1.rdata(FHD_realData::sigma_wall)/2.0; // LJ126 cutoff for repulsive only
+                const Real cutlong126 = 2.5*p1.rdata(FHD_realData::sigma_wall)/2.0; // LJ126 cutoff for attractive + repulsive LJ
 
                 if ((r2 < cut93*cut93) && (sr_tog == 2) ) 
                 {
@@ -870,9 +872,9 @@ void compute_forces_nl_gpu (FhdParticleContainer::AoS& aos, int Np, int Nn,
                 const Real r2min = amrex::max(r2, rmin*rmin);
                 //const Real r = sqrt(r2);
 
-                const Real cut93 = 1.20094*p1.rdata(FHD_realData::sigma)/4.0; //LJ93 cutoff for repulsive only
-                const Real cutshort126 = 1.122*p1.rdata(FHD_realData::sigma_wall)/4.0; // LJ126 cutoff for repulsive only
-                const Real cutlong126 = 2.5*p1.rdata(FHD_realData::sigma_wall)/4.0; // LJ126 cutoff for attractive + repulsive LJ
+                const Real cut93 = 1.20094*p1.rdata(FHD_realData::sigma)/2.0; //LJ93 cutoff for repulsive only
+                const Real cutshort126 = 1.122*p1.rdata(FHD_realData::sigma_wall)/2.0; // LJ126 cutoff for repulsive only
+                const Real cutlong126 = 2.5*p1.rdata(FHD_realData::sigma_wall)/2.0; // LJ126 cutoff for attractive + repulsive LJ
 
                 if ((r2 < cut93*cut93) && (sr_tog == 2) ) 
                 {
@@ -908,9 +910,9 @@ void compute_forces_nl_gpu (FhdParticleContainer::AoS& aos, int Np, int Nn,
                 const Real r2min = amrex::max(r2, rmin*rmin);
                 //const Real r = sqrt(r2);
 
-                const Real cut93 = 1.20094*p1.rdata(FHD_realData::sigma)/4.0; //LJ93 cutoff for repulsive only
-                const Real cutshort126 = 1.122*p1.rdata(FHD_realData::sigma_wall)/4.0; // LJ126 cutoff for repulsive only
-                const Real cutlong126 = 2.5*p1.rdata(FHD_realData::sigma_wall)/4.0; // LJ126 cutoff for attractive + repulsive LJ
+                const Real cut93 = 1.20094*p1.rdata(FHD_realData::sigma)/2.0; //LJ93 cutoff for repulsive only
+                const Real cutshort126 = 1.122*p1.rdata(FHD_realData::sigma_wall)/2.0; // LJ126 cutoff for repulsive only
+                const Real cutlong126 = 2.5*p1.rdata(FHD_realData::sigma_wall)/2.0; // LJ126 cutoff for attractive + repulsive LJ
 
                 if ((r2 < cut93*cut93) && (sr_tog == 2) ) 
                 {
