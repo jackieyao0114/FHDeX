@@ -27,8 +27,8 @@ module common_namelist_module
   double precision,   save :: transmission
 
   double precision,   save :: qval(MAX_SPECIES)
-  integer,            save :: pkernel_fluid
-  integer,            save :: pkernel_es
+  integer,            save :: pkernel_fluid(MAX_SPECIES)
+  integer,            save :: pkernel_es(MAX_SPECIES)
 
   double precision,   save :: mass(MAX_SPECIES)
   double precision,   save :: nfrac(MAX_SPECIES)
@@ -175,7 +175,7 @@ module common_namelist_module
   integer,            save :: dry_move_tog
   integer,            save :: sr_tog
   integer,            save :: graphene_tog
-  integer,            save :: crange
+  integer,            save :: crange(MAX_SPECIES)
   integer,            save :: thermostat_tog
   integer,            save :: zero_net_force
 
@@ -538,8 +538,8 @@ contains
     p_force_tog(:) = 1
     p_int_tog(:) = 1
 
-    pkernel_fluid = 4
-    pkernel_es = 4
+    pkernel_fluid(:) = 4
+    pkernel_es(:) = 4
     solve_chem = 0
     diffcoeff  = 0.001
     scaling_factor = 0.1
@@ -669,8 +669,8 @@ contains
     double precision,       intent(inout) :: transmission_in
 
     double precision,       intent(inout) :: qval_in(MAX_SPECIES)
-    integer,                intent(inout) :: pkernel_fluid_in
-    integer,                intent(inout) :: pkernel_es_in
+    integer,                intent(inout) :: pkernel_fluid_in(MAX_SPECIES)
+    integer,                intent(inout) :: pkernel_es_in(MAX_SPECIES)
 
     integer,                intent(inout) :: max_step_in
     integer,                intent(inout) :: plot_int_in
@@ -786,7 +786,7 @@ contains
     integer,                intent(inout) :: rfd_tog_in
     integer,                intent(inout) :: dry_move_tog_in
     integer,                intent(inout) :: sr_tog_in
-    integer,                intent(inout) :: crange_in
+    integer,                intent(inout) :: crange_in(MAX_SPECIES)
     integer,                intent(inout) :: graphene_tog_in
     integer,                intent(inout) :: thermostat_tog_in
     integer,                intent(inout) :: zero_net_force_in
