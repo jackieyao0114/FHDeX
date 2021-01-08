@@ -82,6 +82,9 @@ void InitializeCommonNamespace() {
     sigma.resize(MAX_SPECIES);
     qval.resize(MAX_SPECIES);
 
+    pkernel_fluid.resize(MAX_SPECIES);
+    pkernel_es.resize(MAX_SPECIES);
+
     diff.resize(MAX_SPECIES);
 
     eamp.resize(3);    
