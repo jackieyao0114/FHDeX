@@ -67,24 +67,28 @@ void main_driver(const char* argv)
     // AJN - for perdictor/corrector do we need one more ghost cell if the predictor pushes
     //       a particle into a ghost region?
     int ang = 1;
-    if (pkernel_fluid == 3) {
+    // using maximum number of peskin kernel points to determine the ghost cells for the whole grid.
+    //     not sure if it will cause problem for BCs.
+    if (*(std::max_element(pkernel_fluid.begin(),pkernel_fluid.end())) == 3) {
         ang = 2;
     }
-    else if (pkernel_fluid == 4) {
+    else if (*(std::max_element(pkernel_fluid.begin(),pkernel_fluid.end())) == 4) {
         ang = 3;
     }
-    else if (pkernel_fluid == 6) {
+    else if (*(std::max_element(pkernel_fluid.begin(),pkernel_fluid.end())) == 6) {
         ang = 4;
     }
 
     int ngp = 1;
-    if (pkernel_es == 3) {
+    // using maximum number of peskin kernel points to determine the ghost cells for the whole grid.
+    //     not sure if it will cause problem for BCs.
+    if (*(std::max_element(pkernel_es.begin(),pkernel_es.end())) == 3) {
         ngp = 2;
     }
-    else if (pkernel_es == 4) {
+    else if (*(std::max_element(pkernel_es.begin(),pkernel_es.end())) == 4) {
         ngp = 3;
     }
-    else if (pkernel_es == 6) {
+    else if (*(std::max_element(pkernel_es.begin(),pkernel_es.end())) == 6) {
         ngp = 4;
     }
         
@@ -337,17 +341,20 @@ void main_driver(const char* argv)
 
     double realParticles = 0;
     double simParticles = 0;
-    double wetRad;
+    double wetRad[nspecies];
     double dxAv = (dx[0] + dx[1] + dx[2])/3.0; //This is probably the wrong way to do this.
 
-    if (pkernel_fluid == 3) {
-        wetRad = 0.91*dxAv;
-    }
-    else if (pkernel_fluid == 4) {
-        wetRad = 1.255*dxAv;
-    }
-    else if (pkernel_fluid == 6) {
-        wetRad = 1.481*dxAv;
+    for(int j=0;j<nspecies;j++) {
+
+       if (pkernel_fluid[j] == 3) {
+           wetRad[j] = 0.91*dxAv;
+       }
+       else if (pkernel_fluid[j] == 4) {
+           wetRad[j] = 1.255*dxAv;
+       }
+       else if (pkernel_fluid[j] == 6) {
+           wetRad[j] = 1.481*dxAv;
+       }
     }
 
     for(int i=0;i<nspecies;i++) {
@@ -364,7 +371,7 @@ void main_driver(const char* argv)
             ionParticle[i].totalDiff = (k_B*T_init[0])/(6*3.14159265359*(diameter[i]/2.0)*visc_coef);
 
             // compute wet diffusion from wetRad
-            ionParticle[i].wetDiff = (k_B*T_init[0])/(6*3.14159265359*wetRad*visc_coef);
+            ionParticle[i].wetDiff = (k_B*T_init[0])/(6*3.14159265359*wetRad[i]*visc_coef);
 
             if (all_dry == 1) {
                 ionParticle[i].dryDiff = ionParticle[i].totalDiff;
@@ -387,7 +394,7 @@ void main_driver(const char* argv)
                // std::cout << "Species " << i << " radius: " << ionParticle[i].d << std::endl;
 
             // compute wet diffusion from wetRad
-            ionParticle[i].wetDiff = (k_B*T_init[0])/(6*3.14159265359*wetRad*visc_coef);
+            ionParticle[i].wetDiff = (k_B*T_init[0])/(6*3.14159265359*wetRad[i]*visc_coef);
 
             if (all_dry == 1) {
                 ionParticle[i].dryDiff = ionParticle[i].totalDiff;
@@ -410,7 +417,7 @@ void main_driver(const char* argv)
                 << " dry diffusion: " << ionParticle[i].dryDiff
                 << " percent dry: " << 100.*ionParticle[i].dryDiff/ionParticle[i].totalDiff << "\n"
                 << " total radius: " << ionParticle[i].d/2.0 << "\n"
-                << " wet radius: " << wetRad << "\n"
+                << " wet radius: " << wetRad[i] << "\n"
                 << " dry radius: " << (k_B*T_init[0])/(6*3.14159265359*(ionParticle[i].dryDiff)*visc_coef) << "\n";
 
         if (ionParticle[i].dryDiff < 0) {

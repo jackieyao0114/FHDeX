@@ -197,12 +197,13 @@ contains
 
   end subroutine calc_im_charge_loc
 
-  subroutine compute_p3m_force_mag(r, mag, dx) &
+  subroutine compute_p3m_force_mag(r, mag, dx, pkernel_es_local) & !adding a local peskin kernel identifier since particle information is not provided
                                    bind(c, name="compute_p3m_force_mag")
 
     real(amrex_real), intent(in   ) :: r  
     real(amrex_real), intent(inout) :: mag
     real(amrex_real), intent(in   ) :: dx(3)
+    integer,          intent(in   ) :: pkernel_es_local
 
     real(amrex_real) :: vals6(70), points6(70), vals4(50), points4(50),r_cell_frac, m, r_norm
     integer          :: r_cell
@@ -258,14 +259,14 @@ contains
     !print *, "r: ", r_cell_frac
     !print *, "cr: ", r_cell, r
     !print *, "r_cell_frac: ", r_cell_frac
-    if (pkernel_es .eq. 6) then 
+    if (pkernel_es_local .eq. 6) then 
 
        ! do linear interpolation of force between vals(i+1) and val(i) 
        m = (vals6(r_cell+1)-vals6(r_cell))/(points6(r_cell+1)-points6(r_cell))
 
        mag  = m*r_cell_frac + vals6(r_cell)
 
-    elseif (pkernel_es .eq. 4) then 
+    elseif (pkernel_es_local .eq. 4) then 
 
        ! do linear interpolation of force between vals(i+1) and val(i) 
        m = (vals4(r_cell+1)-vals4(r_cell))/(points4(r_cell+1)-points4(r_cell))
@@ -430,7 +431,7 @@ contains
              particles(i)%force = particles(i)%force + ee*(dr/r)*particles(i)%q*(-1.d0*particles(i)%q)/r2
              !print*, 'coulomb interaction w self image: ', ee*(dr/r)*particles(i)%q*(-1.d0*particles(i)%q)/r2
              ! p3m 
-             call compute_p3m_force_mag(r, correction_force_mag, dx)
+             call compute_p3m_force_mag(r, correction_force_mag, dx, pkernel_es(particles(i)%species))
 
              particles(i)%force = particles(i)%force - ee*particles(i)%q*(-1.d0*particles(i)%q)*(dr/r)*correction_force_mag*dx2_inv
 
@@ -440,7 +441,7 @@ contains
              particles(i)%force = particles(i)%force + ee*(dr/r)*particles(i)%q*(1.d0*particles(i)%q)/r2
              !print*, 'coulomb interaction w self image: ', ee*(dr/r)*particles(i)%q*(1.d0*particles(i)%q)/r2
              ! p3m 
-             call compute_p3m_force_mag(r, correction_force_mag, dx)
+             call compute_p3m_force_mag(r, correction_force_mag, dx, pkernel_es(particles(i)%species))
              particles(i)%force = particles(i)%force - ee*particles(i)%q*(1.d0*particles(i)%q)*(dr/r)*correction_force_mag*dx2_inv
 
           endif
@@ -466,7 +467,7 @@ contains
              particles(i)%force = particles(i)%force + ee*(dr/r)*particles(i)%q*(-1.d0*particles(i)%q)/r2
              !print*, 'coulomb interaction w self image: ', ee*(dr/r)*particles(i)%q*(-1.d0*particles(i)%q)/r2
              ! p3m 
-             call compute_p3m_force_mag(r, correction_force_mag, dx)
+             call compute_p3m_force_mag(r, correction_force_mag, dx, pkernel_es(particles(i)%species))
              particles(i)%force = particles(i)%force - ee*particles(i)%q*(-1.d0*particles(i)%q)*(dr/r)*correction_force_mag*dx2_inv
 
           else if ((bc_es_hi(2) .eq. 2) .and. (r .lt. (particles(i)%p3m_radius))) then                 ! hom. neumann  --image charge equal that of particle
@@ -474,7 +475,7 @@ contains
              particles(i)%force = particles(i)%force + ee*(dr/r)*particles(i)%q*(1.d0*particles(i)%q)/r2
              !print*, 'coulomb interaction w self image: ', ee*(dr/r)*particles(i)%q*(1.d0*particles(i)%q)/r2
              ! p3m
-             call compute_p3m_force_mag(r, correction_force_mag, dx)
+             call compute_p3m_force_mag(r, correction_force_mag, dx, pkernel_es(particles(i)%species))
              particles(i)%force = particles(i)%force - ee*particles(i)%q*(1.d0*particles(i)%q)*(dr/r)*correction_force_mag*dx2_inv
           endif
 
@@ -518,7 +519,7 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!
                 !print *, "calling with ", r, (particles(i)%p3m_radius)
 
-             call compute_p3m_force_mag(r, correction_force_mag, dx)
+             call compute_p3m_force_mag(r, correction_force_mag, dx, pkernel_es(particles(i)%species))
 
              !print *, correction_force_mag, ee, particles(i)%q, dx2_inv
 
@@ -553,7 +554,7 @@ contains
                       !print*, 'Coulomb: ', ee*(dr/r)*particles(i)%q*(-1.d0*particles(nl(j))%q)/r2
 
                       ! p3m
-                      call compute_p3m_force_mag(r, correction_force_mag, dx)
+                      call compute_p3m_force_mag(r, correction_force_mag, dx, pkernel_es(particles(i)%species))
                       particles(i)%force = particles(i)%force - ee*particles(i)%q*(-1.d0*particles(nl(j))%q)*(dr/r)*correction_force_mag*dx2_inv
 
                       !print *, "Below: ", particles(i)%id, correction_force_mag, particles(i)%force
@@ -565,7 +566,7 @@ contains
                       !print*, 'Coulomb interaction w NL im part: ', ee*(dr/r)*particles(i)%q*(1.d0*particles(nl(j))%q)/r2
 
                       ! p3m 
-                      call compute_p3m_force_mag(r, correction_force_mag, dx)
+                      call compute_p3m_force_mag(r, correction_force_mag, dx, pkernel_es(particles(i)%species))
                       particles(i)%force = particles(i)%force - ee*particles(i)%q*(1.d0*particles(nl(j))%q)*(dr/r)*correction_force_mag*dx2_inv
 
                    endif
@@ -595,7 +596,7 @@ contains
                       particles(i)%force = particles(i)%force + ee*(dr/r)*particles(i)%q*(-1.d0*particles(nl(j))%q)/r2
                       !print*, 'Coulomb interaction w NL im part: ', ee*(dr/r)*particles(i)%q*(-1.d0*particles(nl(j))%q)/r2
                       ! p3m 
-                      call compute_p3m_force_mag(r, correction_force_mag, dx)
+                      call compute_p3m_force_mag(r, correction_force_mag, dx, pkernel_es(particles(i)%species))
                       particles(i)%force = particles(i)%force - ee*particles(i)%q*(-1.d0*particles(nl(j))%q)*(dr/r)*correction_force_mag*dx2_inv
 
                    else if ((bc_es_hi(2) .eq. 2) .and. (r .lt. (particles(i)%p3m_radius))) then                 ! hom. neumann  --image charge equal that of particle
@@ -604,7 +605,7 @@ contains
                       particles(i)%force = particles(i)%force + ee*(dr/r)*particles(i)%q*(1.d0*particles(nl(j))%q)/r2
                       !print*, 'Coulomb interaction w NL im part: ', ee*(dr/r)*particles(i)%q*(1.d0*particles(nl(j))%q)/r2
                       ! p3m 
-                      call compute_p3m_force_mag(r, correction_force_mag, dx)
+                      call compute_p3m_force_mag(r, correction_force_mag, dx, pkernel_es(particles(i)%species))
                       particles(i)%force = particles(i)%force - ee*particles(i)%q*(1.d0*particles(nl(j))%q)*(dr/r)*correction_force_mag*dx2_inv
 
                       !print *, "Post ", correction_force_mag, particles(i)%force, dr, r
@@ -1517,15 +1518,15 @@ contains
                yy = part%pos(2) - coordsu(fi(1)+i,fi(2)+j+fn(2),fi(3)+k+fn(3),2)
                zz = part%pos(3) - coordsu(fi(1)+i,fi(2)+j+fn(2),fi(3)+k+fn(3),3)
 
-               if(pkernel_fluid .eq. 3) then
+               if(pkernel_fluid(part%species) .eq. 3) then
                   call peskin_3pt(xx*dxfinv(1),w1)
                   call peskin_3pt(yy*dxfinv(2),w2)
                   call peskin_3pt(zz*dxfinv(3),w3)
-               elseif(pkernel_fluid .eq. 4) then
+               elseif(pkernel_fluid(part%species) .eq. 4) then
                   call peskin_4pt(xx*dxfinv(1),w1)
                   call peskin_4pt(yy*dxfinv(2),w2)
                   call peskin_4pt(zz*dxfinv(3),w3)
-               elseif(pkernel_fluid .eq. 6) then
+               elseif(pkernel_fluid(part%species) .eq. 6) then
                   call peskin_6pt(xx*dxfinv(1),w1)
                   call peskin_6pt(yy*dxfinv(2),w2)
                   call peskin_6pt(zz*dxfinv(3),w3)
@@ -1551,15 +1552,15 @@ contains
                yy = part%pos(2) - coordsv(fi(1)+i+fn(1),fi(2)+j,fi(3)+k+fn(3),2)
                zz = part%pos(3) - coordsv(fi(1)+i+fn(1),fi(2)+j,fi(3)+k+fn(3),3)
 
-               if(pkernel_fluid .eq. 3) then
+               if(pkernel_fluid(part%species) .eq. 3) then
                   call peskin_3pt(xx*dxfinv(1),w1)
                   call peskin_3pt(yy*dxfinv(2),w2)
                   call peskin_3pt(zz*dxfinv(3),w3)
-               elseif(pkernel_fluid .eq. 4) then
+               elseif(pkernel_fluid(part%species) .eq. 4) then
                   call peskin_4pt(xx*dxfinv(1),w1)
                   call peskin_4pt(yy*dxfinv(2),w2)
                   call peskin_4pt(zz*dxfinv(3),w3)
-               elseif(pkernel_fluid .eq. 6) then
+               elseif(pkernel_fluid(part%species) .eq. 6) then
                   call peskin_6pt(xx*dxfinv(1),w1)
                   call peskin_6pt(yy*dxfinv(2),w2)
                   call peskin_6pt(zz*dxfinv(3),w3)
@@ -1578,15 +1579,15 @@ contains
                yy = part%pos(2) - coordsw(fi(1)+i+fn(1),fi(2)+j+fn(2),fi(3)+k,2)
                zz = part%pos(3) - coordsw(fi(1)+i+fn(1),fi(2)+j+fn(2),fi(3)+k,3)
 
-               if(pkernel_fluid .eq. 3) then
+               if(pkernel_fluid(part%species) .eq. 3) then
                   call peskin_3pt(xx*dxfinv(1),w1)
                   call peskin_3pt(yy*dxfinv(2),w2)
                   call peskin_3pt(zz*dxfinv(3),w3)
-               elseif(pkernel_fluid .eq. 4) then
+               elseif(pkernel_fluid(part%species) .eq. 4) then
                   call peskin_4pt(xx*dxfinv(1),w1)
                   call peskin_4pt(yy*dxfinv(2),w2)
                   call peskin_4pt(zz*dxfinv(3),w3)
-               elseif(pkernel_fluid .eq. 6) then
+               elseif(pkernel_fluid(part%species) .eq. 6) then
                   call peskin_6pt(xx*dxfinv(1),w1)
                   call peskin_6pt(yy*dxfinv(2),w2)
                   call peskin_6pt(zz*dxfinv(3),w3)
@@ -1679,15 +1680,15 @@ contains
              !        print *, "coords: ", fi(1)+i+fn(1), fi(2)+j+fn(2), fi(3)+k+fn(3)
              !        print *, "Realcoords: ", coords(fi(1)+i+fn(1),fi(2)+j+fn(2),fi(3)+k+fn(3),1), coords(fi(1)+i+fn(1),fi(2)+j+fn(2),fi(3)+k+fn(3),2), coords(fi(1)+i+fn(1),fi(2)+j+fn(2),fi(3)+k+fn(3),3)
 
-             if(pkernel_es .eq. 3) then
+             if(pkernel_es(part%species) .eq. 3) then
                 call peskin_3pt(xx*dxinv(1),w1)
                 call peskin_3pt(yy*dxinv(2),w2)
                 call peskin_3pt(zz*dxinv(3),w3)
-             elseif(pkernel_es .eq. 4) then
+             elseif(pkernel_es(part%species) .eq. 4) then
                 call peskin_4pt(xx*dxinv(1),w1)
                 call peskin_4pt(yy*dxinv(2),w2)
                 call peskin_4pt(zz*dxinv(3),w3)
-             elseif(pkernel_es .eq. 6) then
+             elseif(pkernel_es(part%species) .eq. 6) then
                 call peskin_6pt(xx*dxinv(1),w1)
                 call peskin_6pt(yy*dxinv(2),w2)
                 call peskin_6pt(zz*dxinv(3),w3)
@@ -1822,12 +1823,12 @@ contains
 
     volinv = 1/(dx(1)*dx(2)*dx(3))
 
-    if(pkernel_es .eq. 3) then 
+    if(pkernel_es(part%species) .eq. 3) then 
        !pvol = 6.28319
        pvol = 1
-    elseif(pkernel_es .eq. 4) then  
+    elseif(pkernel_es(part%species) .eq. 4) then  
        pvol = 1
-    elseif(pkernel_es .eq. 6) then  
+    elseif(pkernel_es(part%species) .eq. 6) then  
        pvol = 1
     endif
 
@@ -2301,17 +2302,6 @@ contains
     double precision, allocatable :: weights(:,:,:,:)
     integer, allocatable :: indicies(:,:,:,:,:)
 
-    if(pkernel_fluid .eq. 3) then
-       ks = 2
-    elseif(pkernel_fluid .eq. 4) then
-       ks = 3
-    elseif(pkernel_fluid .eq. 6) then
-       ks = 4
-    endif
-
-    allocate(weights(-(ks-1):ks,-(ks-1):ks,-(ks-1):ks,3))
-    allocate(indicies(-(ks-1):ks,-(ks-1):ks,-(ks-1):ks,3,3))
-
     domsize = phi - plo
 
     adj = 0.99999d0
@@ -2350,6 +2340,19 @@ contains
              do while (p <= new_np)
 
                 part => particles(cell_parts(p))
+
+                !Doing peskin kernel check for each particle, within the for loop
+                if(pkernel_fluid(part%species) .eq. 3) then
+                   ks = 2
+                elseif(pkernel_fluid(part%species) .eq. 4) then
+                   ks = 3
+                elseif(pkernel_fluid(part%species) .eq. 6) then
+                   ks = 4
+                endif
+            
+                !Allocate and deallocate weights and indices within the for loop as well
+                allocate(weights(-(ks-1):ks,-(ks-1):ks,-(ks-1):ks,3))
+                allocate(indicies(-(ks-1):ks,-(ks-1):ks,-(ks-1):ks,3,3))
 
                 !print *, "Moving", part%id
  
@@ -2605,6 +2608,9 @@ contains
 
              cell_part_cnt(i,j,k) = new_np
 
+             deallocate(weights)
+             deallocate(indicies)
+
           end do
        end do
     end do
@@ -2621,8 +2627,6 @@ contains
        print *, "Average diffusion coefficient: ", diffinst/np
     end if
 
-    deallocate(weights)
-    deallocate(indicies)
 
   end subroutine move_ions_fhd
 
@@ -2712,27 +2716,6 @@ contains
     integer, allocatable :: indicies(:,:,:,:,:)
     real(amrex_real) poisson_force(3)
 
-    if(pkernel_fluid .gt. pkernel_es) then
-       if(pkernel_fluid .eq. 3) then
-          ks = 2
-       elseif(pkernel_fluid .eq. 4) then
-          ks = 3
-       elseif(pkernel_fluid .eq. 6) then
-          ks = 4
-       endif
-    else
-       if(pkernel_es .eq. 3) then
-          ks = 2
-       elseif(pkernel_es .eq. 4) then
-          ks = 3
-       elseif(pkernel_es .eq. 6) then
-          ks = 4
-       endif
-    endif
-
-    allocate(weights(-(ks-1):ks,-(ks-1):ks,-(ks-1):ks,3))
-    allocate(indicies(-(ks-1):ks,-(ks-1):ks,-(ks-1):ks,3,3))
-
     domsize = phi - plo
 
     adj = 0.999999
@@ -2756,6 +2739,29 @@ contains
     do while (p <= np)
 
        part => particles(p)
+
+       !Doing peskin kernel check for each particle, within the for loop
+       if(pkernel_fluid(part%species) .gt. pkernel_es(part%species)) then
+          if(pkernel_fluid(part%species) .eq. 3) then
+             ks = 2
+          elseif(pkernel_fluid(part%species) .eq. 4) then
+             ks = 3
+          elseif(pkernel_fluid(part%species) .eq. 6) then
+             ks = 4
+          endif
+       else
+          if(pkernel_es(part%species) .eq. 3) then
+             ks = 2
+          elseif(pkernel_es(part%species) .eq. 4) then
+             ks = 3
+          elseif(pkernel_es(part%species) .eq. 6) then
+             ks = 4
+          endif
+       endif
+   
+       !Allocate and deallocate weights and indices within the for loop as well
+       allocate(weights(-(ks-1):ks,-(ks-1):ks,-(ks-1):ks,3))
+       allocate(indicies(-(ks-1):ks,-(ks-1):ks,-(ks-1):ks,3,3))
 
        if(es_tog .eq. 2) then
 
@@ -2887,6 +2893,9 @@ contains
        !print*, 'Part force at end of spread_ions: ', part%force, part%q
        p = p + 1
 
+       deallocate(weights)
+       deallocate(indicies)
+
     end do
 
     tempvel(3) = 0;
@@ -2908,8 +2917,6 @@ contains
 
     !call set_pos(part, part2,dxe,part%drag_factor)
 
-    deallocate(weights)
-    deallocate(indicies)
 
   end subroutine spread_ions_fhd
 
@@ -2993,26 +3000,6 @@ contains
     double precision, allocatable :: weights(:,:,:,:)
     integer, allocatable :: indicies(:,:,:,:,:)
 
-    if(pkernel_fluid .gt. pkernel_es) then
-       if(pkernel_fluid .eq. 3) then
-          ks = 2
-       elseif(pkernel_fluid .eq. 4) then
-          ks = 3
-       elseif(pkernel_fluid .eq. 6) then
-          ks = 3
-       endif
-    else
-       if(pkernel_es .eq. 3) then
-          ks = 2
-       elseif(pkernel_es .eq. 4) then
-          ks = 3
-       elseif(pkernel_es .eq. 6) then
-          ks = 3
-       endif
-    endif
-
-    allocate(weights(-(ks-1):ks,-(ks-1):ks,-(ks-1):ks,3))
-    allocate(indicies(-(ks-1):ks,-(ks-1):ks,-(ks-1):ks,3,3))
 
     domsize = phi - plo
 
@@ -3036,6 +3023,30 @@ contains
 
        part => particles(p)
 
+
+       !Doing peskin kernel check for each particle, within the for loop
+       if(pkernel_fluid(part%species) .gt. pkernel_es(part%species)) then
+          if(pkernel_fluid(part%species) .eq. 3) then
+             ks = 2
+          elseif(pkernel_fluid(part%species) .eq. 4) then
+             ks = 3
+          elseif(pkernel_fluid(part%species) .eq. 6) then
+             ks = 3
+          endif
+       else
+          if(pkernel_es(part%species) .eq. 3) then
+             ks = 2
+          elseif(pkernel_es(part%species) .eq. 4) then
+             ks = 3
+          elseif(pkernel_es(part%species) .eq. 6) then
+             ks = 3
+          endif
+       endif
+   
+       !Allocate and deallocate weights and indices within the for loop as well
+       allocate(weights(-(ks-1):ks,-(ks-1):ks,-(ks-1):ks,3))
+       allocate(indicies(-(ks-1):ks,-(ks-1):ks,-(ks-1):ks,3,3))
+
        if((rfd_tog .eq. 1) .and. (variance_coef_mom .ne. 0)) then
           part%force = 0
 
@@ -3058,11 +3069,11 @@ contains
 
        p = p + 1
 
+       deallocate(weights)
+       deallocate(indicies)
 
     end do
 
-    deallocate(weights)
-    deallocate(indicies)
 
   end subroutine do_rfd
 
@@ -3097,17 +3108,6 @@ contains
     double precision, allocatable :: weights(:,:,:,:)
     integer, allocatable :: indicies(:,:,:,:,:)
 
-    if(pkernel_es .eq. 3) then
-       ks = 2
-    elseif(pkernel_es .eq. 4) then
-       ks = 3
-    elseif(pkernel_es .eq. 6) then
-       ks = 4
-    endif
-
-    allocate(weights(-(ks-1):ks,-(ks-1):ks,-(ks-1):ks,3))
-    allocate(indicies(-(ks-1):ks,-(ks-1):ks,-(ks-1):ks,3,3))
-
     domsize = phi - plo
 
     dxinv = 1.d0/dx
@@ -3139,6 +3139,18 @@ contains
                 !              runtime = dt
                 part => particles(cell_parts(p))
 
+                !Doing peskin kernel check for each particle, within the for loop
+                if(pkernel_es(part%species) .eq. 3) then
+                   ks = 2
+                elseif(pkernel_es(part%species) .eq. 4) then
+                   ks = 3
+                elseif(pkernel_es(part%species) .eq. 6) then
+                   ks = 4
+                endif
+            
+                !Allocate and deallocate weights and indices within the for loop as well
+                allocate(weights(-(ks-1):ks,-(ks-1):ks,-(ks-1):ks,3))
+                allocate(indicies(-(ks-1):ks,-(ks-1):ks,-(ks-1):ks,3,3))
 
                 call get_weights_scalar_cc(dxes, dxesinv, weights, indicies, &
                      cellcenters, cellcenterslo, cellcentershi, &
@@ -3151,14 +3163,15 @@ contains
 
                 p = p + 1
 
+                deallocate(weights)
+                deallocate(indicies)
+
              enddo
 
           end do
        end do
     end do
 
-    deallocate(weights)
-    deallocate(indicies)
 
   end subroutine collect_charge
 

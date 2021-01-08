@@ -135,10 +135,10 @@ amrex::RealVect calc_im_charge_loc (const FhdParticleContainer::ParticleType& pa
 }
 
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-amrex::Real compute_p3m_force_mag (amrex::Real r, amrex::Real dx, amrex::Real dy, amrex::Real dz)
+amrex::Real compute_p3m_force_mag (amrex::Real r, amrex::Real dx, amrex::Real dy, amrex::Real dz, int pkernel_es_local)// add a local pkernel parameter
 {
     using namespace amrex;
-    using common::pkernel_es;
+    //using common::pkernel_es;
 
     // this is force per dx**2
     constexpr Real vals6[] =
@@ -193,14 +193,14 @@ amrex::Real compute_p3m_force_mag (amrex::Real r, amrex::Real dx, amrex::Real dy
 
     //Print() << "RCELLFRAC: " << r_cell_frac << ", " << r_norm << "\n";
 
-    if (pkernel_es == 6)
+    if (pkernel_es_local == 6)
     {
         // do linear interpolation of force between vals(i+1) and val(i) 
         m = (vals6[r_cell+1]-vals6[r_cell])/(points6[r_cell+1]-points6[r_cell]);
         
         mag  = m*r_cell_frac + vals6[r_cell];
     }
-    else if (pkernel_es == 4)
+    else if (pkernel_es_local == 4)
     {
         // do linear interpolation of force between vals(i+1) and val(i) 
         m = (vals4[r_cell+1]-vals4[r_cell])/(points4[r_cell+1]-points4[r_cell]);
@@ -452,7 +452,7 @@ void compute_p3m_sr_correction_nl_gpu (FhdParticleContainer::AoS& aos, int Np, i
                     p1.rdata(FHD_realData::forcez) += ee*(dr[2]/r)*q*(-q)/r2;
                 }
                 // p3m
-                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2]);
+                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)]);
                 Gpu::Atomic::Add(prcount_di, 1.0);
                 p1.rdata(FHD_realData::forcex) -= ee*(dr[0]/r)*q*(-q)*correction_force_mag*dx2_inv;
                 p1.rdata(FHD_realData::forcey) -= ee*(dr[1]/r)*q*(-q)*correction_force_mag*dx2_inv;
@@ -475,7 +475,7 @@ void compute_p3m_sr_correction_nl_gpu (FhdParticleContainer::AoS& aos, int Np, i
                 }
 
                 // p3m
-                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2]);
+                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)]);
                 Gpu::Atomic::Add(prcount_di, 1.0);
                 p1.rdata(FHD_realData::forcex) -= ee*(dr[0]/r)*q*q*correction_force_mag*dx2_inv;
                 p1.rdata(FHD_realData::forcey) -= ee*(dr[1]/r)*q*q*correction_force_mag*dx2_inv;
@@ -509,7 +509,7 @@ void compute_p3m_sr_correction_nl_gpu (FhdParticleContainer::AoS& aos, int Np, i
                     p1.rdata(FHD_realData::forcez) += ee*(dr[2]/r)*q*(-q)/r2;
                 }
                 // p3m
-                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2]);
+                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)]);
                 Gpu::Atomic::Add(prcount_di, 1.0);
                 p1.rdata(FHD_realData::forcex) -= ee*(dr[0]/r)*q*(-q)*correction_force_mag*dx2_inv;
                 p1.rdata(FHD_realData::forcey) -= ee*(dr[1]/r)*q*(-q)*correction_force_mag*dx2_inv;
@@ -528,7 +528,7 @@ void compute_p3m_sr_correction_nl_gpu (FhdParticleContainer::AoS& aos, int Np, i
                 }
 
                 // p3m
-                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2]);
+                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)]);
                 Gpu::Atomic::Add(prcount_di, 1.0);
                 p1.rdata(FHD_realData::forcex) -= ee*(dr[0]/r)*q*q*correction_force_mag*dx2_inv;
                 p1.rdata(FHD_realData::forcey) -= ee*(dr[1]/r)*q*q*correction_force_mag*dx2_inv;
@@ -564,7 +564,7 @@ void compute_p3m_sr_correction_nl_gpu (FhdParticleContainer::AoS& aos, int Np, i
                 }
 
                 //p3m
-                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2]);
+                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)]);
                 Gpu::Atomic::Add(prcount_d, 1.0);
                 p1.rdata(FHD_realData::forcex) -= ee*(dr[0]/r)*q*q2*correction_force_mag*dx2_inv;
                 p1.rdata(FHD_realData::forcey) -= ee*(dr[1]/r)*q*q2*correction_force_mag*dx2_inv;
@@ -605,7 +605,7 @@ void compute_p3m_sr_correction_nl_gpu (FhdParticleContainer::AoS& aos, int Np, i
                                // Print() << "Coulomb: " << setprecision(17) << ee*(dr[0]/r)*q*(-q2)/r2 << ", " << ee*(dr[1]/r)*q*(-q2)/r2 << ", " << ee*(dr[2]/r)*q*(-q2)/r2 << "\n";
 
                             // p3m
-                            Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2]);
+                            Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)]);
                             Gpu::Atomic::Add(prcount_di, 1.0);
                             p1.rdata(FHD_realData::forcex) -= ee*(dr[0]/r)*q*(-q2)*correction_force_mag*dx2_inv;
                             p1.rdata(FHD_realData::forcey) -= ee*(dr[1]/r)*q*(-q2)*correction_force_mag*dx2_inv;
@@ -626,7 +626,7 @@ void compute_p3m_sr_correction_nl_gpu (FhdParticleContainer::AoS& aos, int Np, i
                             }
                             
                             // p3m
-                            Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2]);
+                            Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)]);
                             Gpu::Atomic::Add(prcount_di, 1.0);
                             p1.rdata(FHD_realData::forcex) -= ee*(dr[0]/r)*q*q2*correction_force_mag*dx2_inv;
                             p1.rdata(FHD_realData::forcey) -= ee*(dr[1]/r)*q*q2*correction_force_mag*dx2_inv;
@@ -663,7 +663,7 @@ void compute_p3m_sr_correction_nl_gpu (FhdParticleContainer::AoS& aos, int Np, i
                                 p1.rdata(FHD_realData::forcez) += ee*(dr[2]/r)*q*(-q2)/r2;
                             }
                             // p3m
-                            Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2]);
+                            Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)]);
                             Gpu::Atomic::Add(prcount_di, 1.0);
                             p1.rdata(FHD_realData::forcex) -= ee*(dr[0]/r)*q*(-q2)*correction_force_mag*dx2_inv;
                             p1.rdata(FHD_realData::forcey) -= ee*(dr[1]/r)*q*(-q2)*correction_force_mag*dx2_inv;
@@ -684,7 +684,7 @@ void compute_p3m_sr_correction_nl_gpu (FhdParticleContainer::AoS& aos, int Np, i
                             }
 
                             // p3m
-                            Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2]);
+                            Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)]);
                             Gpu::Atomic::Add(prcount_di, 1.0);
                             p1.rdata(FHD_realData::forcex) -= ee*(dr[0]/r)*q*q2*correction_force_mag*dx2_inv;
                             p1.rdata(FHD_realData::forcey) -= ee*(dr[1]/r)*q*q2*correction_force_mag*dx2_inv;
@@ -1119,21 +1119,58 @@ void collect_charge_gpu (FhdParticleContainer::AoS& aos, FArrayBox& charge, F f,
     });
 }
 
-void collect_charge_gpu (FhdParticleContainer::AoS& aos, FArrayBox& charge,
-                     const amrex::Real* plo, const amrex::Real* dx)
+template <typename F>
+void collect_charge_per_particle_gpu (FhdParticleContainer::ParticleType& p, amrex::Array4<amrex::Real> const& arr, F f,
+                     IntVect const& nodal_flag, const amrex::GpuArray<Real, 3> plo, const amrex::GpuArray<Real, 3> dx, const amrex::GpuArray<Real, 3> dxi)
 {
-    if (common::pkernel_es == 3)
+    using namespace amrex;
+    constexpr int ks = F::ks;
+    
+    Real volinv = 1.0/(dx[0]*dx[1]*dx[2]);
+    Real permittivity = common::permittivity;
+
+    Real qm = p.rdata(FHD_realData::q)/permittivity;
+    
+    Real w[3][2*ks];
+    int indices[3][2*ks];
+
+    get_weights(p, f, nodal_flag, w, indices, plo, dx, dxi);
+    spread_op(arr, f, w, indices, qm*volinv);
+}
+
+void collect_charge_gpu (FhdParticleContainer::AoS& aos, FArrayBox& charge,
+                     const amrex::Real* plo_in, const amrex::Real* dx_in)
+{
+    using namespace amrex;
+    
+    GpuArray<Real, 3> plo = {plo_in[0], plo_in[1], plo_in[2]};
+    GpuArray<Real, 3> dx  = {dx_in[0],  dx_in[1],  dx_in[2] };    
+    GpuArray<Real, 3> dxi = {1.0/dx_in[0],  1.0/dx_in[1],  1.0/dx_in[2] };
+
+    const auto Np = aos.numParticles();
+    const auto pstruct = aos().dataPtr();
+
+    auto arr = charge.array();
+    const IntVect nodal_flag = charge.box().type();
+    
+    amrex::ParallelFor(Np, [=] AMREX_GPU_HOST_DEVICE (int ip) noexcept
     {
-        collect_charge_gpu (aos, charge, Kernel3P(), plo, dx);
-    }
-    else if (common::pkernel_es == 4)
-    {
-        collect_charge_gpu(aos, charge, Kernel4P(), plo, dx);
-    }
-    else if (common::pkernel_es == 6)
-    {
-        collect_charge_gpu(aos, charge, Kernel6P(), plo, dx);
-    }
+
+        FhdParticleContainer::ParticleType& p = pstruct[ip];
+
+        if (common::pkernel_es[p.idata(FHD_intData::species)] == 3)
+        {
+            collect_charge_per_particle_gpu(p, arr, Kernel3P(), nodal_flag, plo, dx, dxi);
+        }
+        else if (common::pkernel_es[p.idata(FHD_intData::species)] == 4)
+        {
+            collect_charge_per_particle_gpu(p, arr, Kernel4P(), nodal_flag, plo, dx, dxi);
+        }
+        else if (common::pkernel_es[p.idata(FHD_intData::species)] == 6)
+        {
+            collect_charge_per_particle_gpu(p, arr, Kernel6P(), nodal_flag, plo, dx, dxi);
+        }
+    });
 }
 
 template <typename F>
@@ -1183,22 +1220,66 @@ void emf_gpu (FhdParticleContainer::AoS& aos, F f,
     
 }
 
+template <typename F>
+void emf_per_particle_gpu (FhdParticleContainer::ParticleType& p, F f, 
+                      amrex::Array4<amrex::Real> const& Exarr, amrex::Array4<amrex::Real> const& Eyarr, amrex::Array4<amrex::Real> const& Ezarr,
+                      const IntVect Exflag, const IntVect Eyflag, const IntVect Ezflag, 
+                      const amrex::GpuArray<Real, 3> plo, const amrex::GpuArray<Real, 3> dx, const amrex::GpuArray<Real, 3> dxi)
+{
+    constexpr int ks = F::ks;
+       
+    Real w[3][2*ks];
+    int indices[3][2*ks];
+    //Print() << "Here!\n";
+    //E field is cell centered so we can use the same weights/indicies for each component
+    get_weights(p, f, Exflag, w, indices, plo, dx, dxi);
+    p.rdata(FHD_realData::forcex) += p.rdata(FHD_realData::q)*inter_op(Exarr, f, w, indices);
+
+    //get_weights(p, f, Eyflag, w, indices, plo, dx, dxi);
+    p.rdata(FHD_realData::forcey) += p.rdata(FHD_realData::q)*inter_op(Eyarr, f, w, indices);
+
+    //get_weights(p, f, Ezflag, w, indices, plo, dx, dxi);
+    p.rdata(FHD_realData::forcez) += p.rdata(FHD_realData::q)*inter_op(Ezarr, f, w, indices);
+       
+    
+}
+
 void emf_gpu(FhdParticleContainer::AoS& aos,
                       FArrayBox& Ex, FArrayBox& Ey, FArrayBox& Ez,
                       const amrex::Real* plo_in, const amrex::Real* dx_in)
 {
-    if (common::pkernel_es == 3)
+    GpuArray<Real, 3> plo = {plo_in[0], plo_in[1], plo_in[2]};
+    GpuArray<Real, 3> dx  = {dx_in[0],  dx_in[1],  dx_in[2] };
+    GpuArray<Real, 3> dxi = {1.0/dx_in[0],  1.0/dx_in[1],  1.0/dx_in[2] };    
+
+    const auto Np = aos.numParticles();
+    const auto pstruct = aos().dataPtr();
+
+    auto Exarr = Ex.array();
+    auto Eyarr = Ey.array();
+    auto Ezarr = Ez.array();
+
+    const IntVect Exflag = Ex.box().type();
+    const IntVect Eyflag = Ey.box().type();
+    const IntVect Ezflag = Ez.box().type();
+
+    amrex::ParallelFor(Np, [=] AMREX_GPU_HOST_DEVICE (int ip) noexcept
     {
-        emf_gpu(aos, Kernel4P(), Ex, Ey, Ez, plo_in, dx_in);
-    }
-    else if (common::pkernel_es == 4)
-    {
-        emf_gpu(aos, Kernel4P(), Ex, Ey, Ez, plo_in, dx_in);
-    }
-    else if (common::pkernel_es == 6)
-    {
-        emf_gpu(aos, Kernel6P(), Ex, Ey, Ez, plo_in, dx_in);
-    }
+        FhdParticleContainer::ParticleType& p = pstruct[ip];
+
+        if (common::pkernel_es[p.idata(FHD_intData::species)] == 3)
+        {
+            emf_per_particle_gpu(p, Kernel4P(), Exarr, Eyarr, Ezarr, Exflag, Eyflag, Ezflag, plo, dx, dxi);
+        }
+        else if (common::pkernel_es[p.idata(FHD_intData::species)] == 4)
+        {
+            emf_per_particle_gpu(p, Kernel4P(), Exarr, Eyarr, Ezarr, Exflag, Eyflag, Ezflag, plo, dx, dxi);
+        }
+        else if (common::pkernel_es[p.idata(FHD_intData::species)] == 6)
+        {
+        emf_per_particle_gpu(p, Kernel6P(), Exarr, Eyarr, Ezarr, Exflag, Eyflag, Ezflag, plo, dx, dxi);
+        }
+    });
 }
 
 
@@ -1254,23 +1335,71 @@ void spread_ions_fhd_gpu (FhdParticleContainer::AoS& aos, F f,
     
 }
 
+template <typename F>
+void spread_ions_fhd_per_particle_gpu (FhdParticleContainer::ParticleType& p, F f,
+                      amrex::Array4<amrex::Real> const& sourcexarr, amrex::Array4<amrex::Real> const& sourceyarr, amrex::Array4<amrex::Real> const& sourcezarr,
+                      const IntVect sourcexflag, const IntVect sourceyflag, const IntVect sourcezflag, 
+                      const amrex::GpuArray<Real, 3> plo, const amrex::GpuArray<Real, 3> dx, const amrex::GpuArray<Real, 3> dxi)
+{
+    Real volinv = 1.0/(dx[0]*dx[1]*dx[2]);
+
+    constexpr int ks = F::ks;
+       
+    Real forcex = p.rdata(FHD_realData::forcex)*volinv;
+    Real forcey = p.rdata(FHD_realData::forcey)*volinv;
+    Real forcez = p.rdata(FHD_realData::forcez)*volinv;
+    
+    Real w[3][2*ks];
+    int indices[3][2*ks];
+    
+    get_weights(p, f, sourcexflag, w, indices, plo, dx, dxi);
+    spread_op(sourcexarr, f, w, indices, forcex);
+
+    get_weights(p, f, sourceyflag, w, indices, plo, dx, dxi);
+    spread_op(sourceyarr, f, w, indices, forcey);
+
+    get_weights(p, f, sourcezflag, w, indices, plo, dx, dxi);
+    spread_op(sourcezarr, f, w, indices, forcez);
+    
+}
+
 void spread_ions_fhd_gpu(FhdParticleContainer::AoS& aos,
                       FArrayBox& sourcex, FArrayBox& sourcey, FArrayBox& sourcez,
                       const amrex::Real* plo_in,
                       const amrex::Real* dx_in)
 {
-    if (common::pkernel_es == 3)
+    GpuArray<Real, 3> plo = {plo_in[0], plo_in[1], plo_in[2]};
+    GpuArray<Real, 3> dx  = {dx_in[0],  dx_in[1],  dx_in[2] };    
+    GpuArray<Real, 3> dxi = {1.0/dx_in[0],  1.0/dx_in[1],  1.0/dx_in[2] };
+
+    const auto Np = aos.numParticles();
+    const auto pstruct = aos().dataPtr();
+
+    auto sourcexarr = sourcex.array();
+    auto sourceyarr = sourcey.array();
+    auto sourcezarr = sourcez.array();
+
+    const IntVect sourcexflag = sourcex.box().type();
+    const IntVect sourceyflag = sourcey.box().type();
+    const IntVect sourcezflag = sourcez.box().type();
+
+    amrex::ParallelFor(Np, [=] AMREX_GPU_HOST_DEVICE (int ip) noexcept
     {
-        spread_ions_fhd_gpu(aos, Kernel4P(), sourcex, sourcey, sourcez, plo_in, dx_in);
-    }
-    else if (common::pkernel_es == 4)
-    {
-        spread_ions_fhd_gpu(aos, Kernel4P(), sourcex, sourcey, sourcez, plo_in, dx_in);
-    }
-    else if (common::pkernel_es == 6)
-    {
-        spread_ions_fhd_gpu(aos, Kernel6P(), sourcex, sourcey, sourcez, plo_in, dx_in);
-    }
+        FhdParticleContainer::ParticleType& p = pstruct[ip];
+
+        if (common::pkernel_es[p.idata(FHD_intData::species)] == 3)
+        {
+            spread_ions_fhd_per_particle_gpu(p, Kernel4P(), sourcexarr, sourceyarr, sourcezarr, sourcexflag, sourceyflag, sourcezflag, plo, dx, dxi);
+        }
+        else if (common::pkernel_es[p.idata(FHD_intData::species)] == 4)
+        {
+            spread_ions_fhd_per_particle_gpu(p, Kernel4P(), sourcexarr, sourceyarr, sourcezarr, sourcexflag, sourceyflag, sourcezflag, plo, dx, dxi);
+        }
+        else if (common::pkernel_es[p.idata(FHD_intData::species)] == 6)
+        {
+            spread_ions_fhd_per_particle_gpu(p, Kernel6P(), sourcexarr, sourceyarr, sourcezarr, sourcexflag, sourceyflag, sourcezflag, plo, dx, dxi);
+        }
+    });
 }
 
 void mob_interp_gpu(Real z, Real a, Real* tmob, Real* nmob)
