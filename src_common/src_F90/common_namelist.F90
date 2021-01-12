@@ -175,7 +175,7 @@ module common_namelist_module
   integer,            save :: dry_move_tog
   integer,            save :: sr_tog
   integer,            save :: graphene_tog
-  integer,            save :: crange(MAX_SPECIES)
+  integer,            save :: crange
   integer,            save :: thermostat_tog
   integer,            save :: zero_net_force
 
@@ -566,7 +566,7 @@ contains
 
     qval(:) = 0
 
-    crange = pkernel_es + 1
+    crange = maxval(pkernel_es) + 1
 
     ! read in common namelist
     open(unit=100, file=amrex_string_c_to_f(inputs_file), status='old', action='read')
@@ -786,7 +786,7 @@ contains
     integer,                intent(inout) :: rfd_tog_in
     integer,                intent(inout) :: dry_move_tog_in
     integer,                intent(inout) :: sr_tog_in
-    integer,                intent(inout) :: crange_in(MAX_SPECIES)
+    integer,                intent(inout) :: crange_in
     integer,                intent(inout) :: graphene_tog_in
     integer,                intent(inout) :: thermostat_tog_in
     integer,                intent(inout) :: zero_net_force_in

@@ -452,7 +452,7 @@ void compute_p3m_sr_correction_nl_gpu (FhdParticleContainer::AoS& aos, int Np, i
                     p1.rdata(FHD_realData::forcez) += ee*(dr[2]/r)*q*(-q)/r2;
                 }
                 // p3m
-                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)]);
+                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)-1]);
                 Gpu::Atomic::Add(prcount_di, 1.0);
                 p1.rdata(FHD_realData::forcex) -= ee*(dr[0]/r)*q*(-q)*correction_force_mag*dx2_inv;
                 p1.rdata(FHD_realData::forcey) -= ee*(dr[1]/r)*q*(-q)*correction_force_mag*dx2_inv;
@@ -475,7 +475,7 @@ void compute_p3m_sr_correction_nl_gpu (FhdParticleContainer::AoS& aos, int Np, i
                 }
 
                 // p3m
-                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)]);
+                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)-1]);
                 Gpu::Atomic::Add(prcount_di, 1.0);
                 p1.rdata(FHD_realData::forcex) -= ee*(dr[0]/r)*q*q*correction_force_mag*dx2_inv;
                 p1.rdata(FHD_realData::forcey) -= ee*(dr[1]/r)*q*q*correction_force_mag*dx2_inv;
@@ -509,7 +509,7 @@ void compute_p3m_sr_correction_nl_gpu (FhdParticleContainer::AoS& aos, int Np, i
                     p1.rdata(FHD_realData::forcez) += ee*(dr[2]/r)*q*(-q)/r2;
                 }
                 // p3m
-                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)]);
+                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)-1]);
                 Gpu::Atomic::Add(prcount_di, 1.0);
                 p1.rdata(FHD_realData::forcex) -= ee*(dr[0]/r)*q*(-q)*correction_force_mag*dx2_inv;
                 p1.rdata(FHD_realData::forcey) -= ee*(dr[1]/r)*q*(-q)*correction_force_mag*dx2_inv;
@@ -528,7 +528,7 @@ void compute_p3m_sr_correction_nl_gpu (FhdParticleContainer::AoS& aos, int Np, i
                 }
 
                 // p3m
-                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)]);
+                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)-1]);
                 Gpu::Atomic::Add(prcount_di, 1.0);
                 p1.rdata(FHD_realData::forcex) -= ee*(dr[0]/r)*q*q*correction_force_mag*dx2_inv;
                 p1.rdata(FHD_realData::forcey) -= ee*(dr[1]/r)*q*q*correction_force_mag*dx2_inv;
@@ -564,7 +564,7 @@ void compute_p3m_sr_correction_nl_gpu (FhdParticleContainer::AoS& aos, int Np, i
                 }
 
                 //p3m
-                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)]);
+                Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)-1]);
                 Gpu::Atomic::Add(prcount_d, 1.0);
                 p1.rdata(FHD_realData::forcex) -= ee*(dr[0]/r)*q*q2*correction_force_mag*dx2_inv;
                 p1.rdata(FHD_realData::forcey) -= ee*(dr[1]/r)*q*q2*correction_force_mag*dx2_inv;
@@ -605,7 +605,7 @@ void compute_p3m_sr_correction_nl_gpu (FhdParticleContainer::AoS& aos, int Np, i
                                // Print() << "Coulomb: " << setprecision(17) << ee*(dr[0]/r)*q*(-q2)/r2 << ", " << ee*(dr[1]/r)*q*(-q2)/r2 << ", " << ee*(dr[2]/r)*q*(-q2)/r2 << "\n";
 
                             // p3m
-                            Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)]);
+                            Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)-1]);
                             Gpu::Atomic::Add(prcount_di, 1.0);
                             p1.rdata(FHD_realData::forcex) -= ee*(dr[0]/r)*q*(-q2)*correction_force_mag*dx2_inv;
                             p1.rdata(FHD_realData::forcey) -= ee*(dr[1]/r)*q*(-q2)*correction_force_mag*dx2_inv;
@@ -626,7 +626,7 @@ void compute_p3m_sr_correction_nl_gpu (FhdParticleContainer::AoS& aos, int Np, i
                             }
                             
                             // p3m
-                            Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)]);
+                            Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)-1]);
                             Gpu::Atomic::Add(prcount_di, 1.0);
                             p1.rdata(FHD_realData::forcex) -= ee*(dr[0]/r)*q*q2*correction_force_mag*dx2_inv;
                             p1.rdata(FHD_realData::forcey) -= ee*(dr[1]/r)*q*q2*correction_force_mag*dx2_inv;
@@ -663,7 +663,7 @@ void compute_p3m_sr_correction_nl_gpu (FhdParticleContainer::AoS& aos, int Np, i
                                 p1.rdata(FHD_realData::forcez) += ee*(dr[2]/r)*q*(-q2)/r2;
                             }
                             // p3m
-                            Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)]);
+                            Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)-1]);
                             Gpu::Atomic::Add(prcount_di, 1.0);
                             p1.rdata(FHD_realData::forcex) -= ee*(dr[0]/r)*q*(-q2)*correction_force_mag*dx2_inv;
                             p1.rdata(FHD_realData::forcey) -= ee*(dr[1]/r)*q*(-q2)*correction_force_mag*dx2_inv;
@@ -684,7 +684,7 @@ void compute_p3m_sr_correction_nl_gpu (FhdParticleContainer::AoS& aos, int Np, i
                             }
 
                             // p3m
-                            Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)]);
+                            Real correction_force_mag = compute_p3m_force_mag(r, dx[0], dx[1], dx[2], common::pkernel_es[p1.idata(FHD_intData::species)-1]);
                             Gpu::Atomic::Add(prcount_di, 1.0);
                             p1.rdata(FHD_realData::forcex) -= ee*(dr[0]/r)*q*q2*correction_force_mag*dx2_inv;
                             p1.rdata(FHD_realData::forcey) -= ee*(dr[1]/r)*q*q2*correction_force_mag*dx2_inv;
@@ -1158,15 +1158,15 @@ void collect_charge_gpu (FhdParticleContainer::AoS& aos, FArrayBox& charge,
 
         FhdParticleContainer::ParticleType& p = pstruct[ip];
 
-        if (common::pkernel_es[p.idata(FHD_intData::species)] == 3)
+        if (common::pkernel_es[p.idata(FHD_intData::species)-1] == 3)
         {
             collect_charge_per_particle_gpu(p, arr, Kernel3P(), nodal_flag, plo, dx, dxi);
         }
-        else if (common::pkernel_es[p.idata(FHD_intData::species)] == 4)
+        else if (common::pkernel_es[p.idata(FHD_intData::species)-1] == 4)
         {
             collect_charge_per_particle_gpu(p, arr, Kernel4P(), nodal_flag, plo, dx, dxi);
         }
-        else if (common::pkernel_es[p.idata(FHD_intData::species)] == 6)
+        else if (common::pkernel_es[p.idata(FHD_intData::species)-1] == 6)
         {
             collect_charge_per_particle_gpu(p, arr, Kernel6P(), nodal_flag, plo, dx, dxi);
         }
@@ -1267,17 +1267,17 @@ void emf_gpu(FhdParticleContainer::AoS& aos,
     {
         FhdParticleContainer::ParticleType& p = pstruct[ip];
 
-        if (common::pkernel_es[p.idata(FHD_intData::species)] == 3)
+        if (common::pkernel_es[p.idata(FHD_intData::species)-1] == 3)
+        {
+            emf_per_particle_gpu(p, Kernel3P(), Exarr, Eyarr, Ezarr, Exflag, Eyflag, Ezflag, plo, dx, dxi);
+        }
+        else if (common::pkernel_es[p.idata(FHD_intData::species)-1] == 4)
         {
             emf_per_particle_gpu(p, Kernel4P(), Exarr, Eyarr, Ezarr, Exflag, Eyflag, Ezflag, plo, dx, dxi);
         }
-        else if (common::pkernel_es[p.idata(FHD_intData::species)] == 4)
+        else if (common::pkernel_es[p.idata(FHD_intData::species)-1] == 6)
         {
-            emf_per_particle_gpu(p, Kernel4P(), Exarr, Eyarr, Ezarr, Exflag, Eyflag, Ezflag, plo, dx, dxi);
-        }
-        else if (common::pkernel_es[p.idata(FHD_intData::species)] == 6)
-        {
-        emf_per_particle_gpu(p, Kernel6P(), Exarr, Eyarr, Ezarr, Exflag, Eyflag, Ezflag, plo, dx, dxi);
+            emf_per_particle_gpu(p, Kernel6P(), Exarr, Eyarr, Ezarr, Exflag, Eyflag, Ezflag, plo, dx, dxi);
         }
     });
 }
@@ -1387,15 +1387,15 @@ void spread_ions_fhd_gpu(FhdParticleContainer::AoS& aos,
     {
         FhdParticleContainer::ParticleType& p = pstruct[ip];
 
-        if (common::pkernel_es[p.idata(FHD_intData::species)] == 3)
+        if (common::pkernel_es[p.idata(FHD_intData::species)-1] == 3)
+        {
+            spread_ions_fhd_per_particle_gpu(p, Kernel3P(), sourcexarr, sourceyarr, sourcezarr, sourcexflag, sourceyflag, sourcezflag, plo, dx, dxi);
+        }
+        else if (common::pkernel_es[p.idata(FHD_intData::species)-1] == 4)
         {
             spread_ions_fhd_per_particle_gpu(p, Kernel4P(), sourcexarr, sourceyarr, sourcezarr, sourcexflag, sourceyflag, sourcezflag, plo, dx, dxi);
         }
-        else if (common::pkernel_es[p.idata(FHD_intData::species)] == 4)
-        {
-            spread_ions_fhd_per_particle_gpu(p, Kernel4P(), sourcexarr, sourceyarr, sourcezarr, sourcexflag, sourceyflag, sourcezflag, plo, dx, dxi);
-        }
-        else if (common::pkernel_es[p.idata(FHD_intData::species)] == 6)
+        else if (common::pkernel_es[p.idata(FHD_intData::species)-1] == 6)
         {
             spread_ions_fhd_per_particle_gpu(p, Kernel6P(), sourcexarr, sourceyarr, sourcezarr, sourcexflag, sourceyflag, sourcezflag, plo, dx, dxi);
         }

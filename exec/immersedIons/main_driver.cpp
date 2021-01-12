@@ -69,26 +69,26 @@ void main_driver(const char* argv)
     int ang = 1;
     // using maximum number of peskin kernel points to determine the ghost cells for the whole grid.
     //     not sure if it will cause problem for BCs.
-    if (*(std::max_element(pkernel_fluid.begin(),pkernel_fluid.end())) == 3) {
+    if (*(std::max_element(pkernel_fluid.begin(),pkernel_fluid.begin()+nspecies)) == 3) {
         ang = 2;
     }
-    else if (*(std::max_element(pkernel_fluid.begin(),pkernel_fluid.end())) == 4) {
+    else if (*(std::max_element(pkernel_fluid.begin(),pkernel_fluid.begin()+nspecies)) == 4) {
         ang = 3;
     }
-    else if (*(std::max_element(pkernel_fluid.begin(),pkernel_fluid.end())) == 6) {
+    else if (*(std::max_element(pkernel_fluid.begin(),pkernel_fluid.begin()+nspecies)) == 6) {
         ang = 4;
     }
 
     int ngp = 1;
     // using maximum number of peskin kernel points to determine the ghost cells for the whole grid.
     //     not sure if it will cause problem for BCs.
-    if (*(std::max_element(pkernel_es.begin(),pkernel_es.end())) == 3) {
+    if (*(std::max_element(pkernel_es.begin(),pkernel_es.begin()+nspecies)) == 3) {
         ngp = 2;
     }
-    else if (*(std::max_element(pkernel_es.begin(),pkernel_es.end())) == 4) {
+    else if (*(std::max_element(pkernel_es.begin(),pkernel_es.begin()+nspecies)) == 4) {
         ngp = 3;
     }
-    else if (*(std::max_element(pkernel_es.begin(),pkernel_es.end())) == 6) {
+    else if (*(std::max_element(pkernel_es.begin(),pkernel_es.begin()+nspecies)) == 6) {
         ngp = 4;
     }
         
@@ -117,7 +117,7 @@ void main_driver(const char* argv)
     MultiFab chargeV;
     
     if (restart < 0) {
-        
+      
         // zero is a clock-based seed
         int fhdSeed      = 0;
         int particleSeed = 0;
