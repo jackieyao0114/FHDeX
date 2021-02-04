@@ -63,6 +63,9 @@ public:
     IBMarkerContainerBase(const Geometry & geom, const DistributionMapping & dmap,
                           const BoxArray & ba, int n_nbhd);
 
+    IBMarkerContainerBase(const Geometry & geom, const Geometry & geomF, const DistributionMapping & dmap,
+                          const BoxArray & ba, const BoxArray & baF, int n_nbhd, int ngF);
+
     virtual ~IBMarkerContainerBase() {};
 
 
@@ -75,14 +78,21 @@ public:
         return pti.GetArrayOfStructs().numParticles();
     };
 
-
-
+    // Get total number of markers accross all ranks.
+    int getTotalMarkers(){
+        return totalMarkers;
+    };
     /****************************************************************************
      *                                                                          *
      * Marker Spreading and Interpolation                                       *
      *                                                                          *
      ***************************************************************************/
 
+    void initRankLists(int totalM);
+    void loadPinMatrix(int totalP, char* filename);
+    void pinnedParticleInversion();
+
+    int getTotalPinnedMarkers();
 
     //___________________________________________________________________________
     // Static spreading operators applied to raw data arrays
@@ -138,7 +148,7 @@ public:
     void SpreadMarkersGpu(int lev,
             std::array<MultiFab, AMREX_SPACEDIM> & f_out,
             const std::array<MultiFab, AMREX_SPACEDIM> & coords,
-            const Real * dx, int ghost) const;
+            const Real * dx, int ghost);
 
     void SpreadPredictor(int lev,
                          std::array<MultiFab, AMREX_SPACEDIM> & f_out) const;
@@ -258,6 +268,7 @@ public:
         return  face_coords[lev];
     }
 
+    std::array<MultiFab, AMREX_SPACEDIM> f_weights;
 
 protected:
 
@@ -266,12 +277,32 @@ protected:
     void InitInternals(int ngrow);
     void ReadStaticParameters();
 
+    
+
     AmrCore * m_amr_core;
+
+    Gpu::ManagedDeviceVector<int> ranksIdSorted;
+    Gpu::ManagedDeviceVector<int> idsRankSorted;
+    Gpu::ManagedDeviceVector<int> rankTotals;
+
+    Gpu::ManagedDeviceVector<amrex::Real> pinMatrix;
+
+    int totalMarkers;
+    int totalPinnedMarkers;
 
 private:
 
     // Positions on faces
     Vector<std::array<MultiFab, AMREX_SPACEDIM>> face_coords;
+    
+
+
+
+//    Vector<int> ranksIdSorted;
+//    Vector<int> idsRankSorted;
+//    Vector<int> rankTotals;
+//    int totalMarkers;
+
 };
 
 

@@ -1,14 +1,14 @@
 #include "multispec_functions.H"
 #include "common_functions.H"
 #include <AMReX_MLMG.H>
-#include <AMReX_MLPoisson.H>
+#include <AMReX_MLABecLaplacian.H>
 
 void ElectroDiffusiveMassFluxdiv(const MultiFab& rho,
                                  const MultiFab& Temp,
                                  const MultiFab& rhoWchi,
                                  std::array< MultiFab, AMREX_SPACEDIM >& diff_mass_flux,
                                  MultiFab& diff_mass_fluxdiv,
-                                 std::array< const MultiFab, AMREX_SPACEDIM >& stoch_mass_flux,
+                                 std::array< MultiFab, AMREX_SPACEDIM >& stoch_mass_flux,
                                  MultiFab& charge,
                                  std::array< MultiFab, AMREX_SPACEDIM >& grad_Epot,
                                  MultiFab& Epot,
@@ -33,8 +33,6 @@ void ElectroDiffusiveMassFluxdiv(const MultiFab& rho,
                              stoch_mass_flux,charge,grad_Epot,Epot,permittivity,
                              dt,zero_initial_Epot,geom);
 
-
-    
     // add fluxes to diff_mass_flux
     for (int i=0; i<AMREX_SPACEDIM; ++i) {
         MultiFab::Add(diff_mass_flux[i],electro_mass_flux[i],0,0,nspecies,0);
@@ -50,7 +48,7 @@ void ElectroDiffusiveMassFlux(const MultiFab& rho,
                               const MultiFab& rhoWchi,
                               std::array< MultiFab, AMREX_SPACEDIM >& electro_mass_flux,
                               std::array< MultiFab, AMREX_SPACEDIM >& diff_mass_flux,
-                              std::array< const MultiFab, AMREX_SPACEDIM >& stoch_mass_flux,
+                              std::array< MultiFab, AMREX_SPACEDIM >& stoch_mass_flux,
                               MultiFab& charge,
                               std::array< MultiFab, AMREX_SPACEDIM >& grad_Epot,
                               MultiFab& Epot,
@@ -159,8 +157,9 @@ void ElectroDiffusiveMassFlux(const MultiFab& rho,
             MultiFab::Multiply(permittivity_fc[i],E_ext[i],0,0,1,0);
         }
 
-        // compute div (epsilon*E_ext) and add it to solver rhs
-        ComputeDiv(rhs,permittivity_fc,0,0,1,geom,1);
+        // compute div (epsilon*E_ext) and SUBTRACT it to solver rhs
+        // this needs to be tested with spatially-varying E_ext OR epsilon
+        ComputeDiv(rhs,permittivity_fc,0,0,1,geom,-1.);
     }
 
     // solve (alpha - del dot beta grad) Epot = charge (for electro-explicit)
@@ -194,16 +193,17 @@ void ElectroDiffusiveMassFlux(const MultiFab& rho,
         }
     }
 
-    //create solver opject
-    MLPoisson linop({geom}, {ba}, {dmap});
+    // create solver opject
+    // (alpha - del dot beta grad) Epot = charge (for electro-explicit)
+    MLABecLaplacian linop({geom}, {ba}, {dmap});
  
     //set BCs
     linop.setDomainBC({AMREX_D_DECL(lo_linop_bc[0],
                                     lo_linop_bc[1],
                                     lo_linop_bc[2])},
-        {AMREX_D_DECL(hi_linop_bc[0],
-                      hi_linop_bc[1],
-                      hi_linop_bc[2])});
+                      {AMREX_D_DECL(hi_linop_bc[0],
+                                    hi_linop_bc[1],
+                                    hi_linop_bc[2])});
 
     // fill in ghost cells with Dirichlet/Neumann values
     // the ghost cells will hold the value ON the boundary
@@ -212,23 +212,28 @@ void ElectroDiffusiveMassFlux(const MultiFab& rho,
     // tell MLPoisson about these potentially inhomogeneous BC values
     linop.setLevelBC(0, &Epot);
 
-    // uncomment this once AMReX PR #1471 is merged
     // this forces the solver to NOT enforce solvability
     // thus if there are Neumann conditions on phi they must
     // be correct or the Poisson solver won't converge
     linop.setEnforceSingularSolvable(false);
 
-    //Multi Level Multi Grid
+    // set alpha=0, beta=1 (will overwrite beta with epsilon next)
+    linop.setScalars(0.0, 1.0);
+
+    // set beta=epsilon
+    linop.setBCoeffs(0, amrex::GetArrOfConstPtrs(beta));
+
+    // Multi Level Multi Grid
     MLMG mlmg(linop);
 
     // Solver parameters
     mlmg.setMaxIter(poisson_max_iter);
     mlmg.setVerbose(poisson_verbose);
     mlmg.setBottomVerbose(poisson_bottom_verbose);
-        
-    //Do solve
-    mlmg.solve({&Epot}, {&charge}, poisson_rel_tol, 0.0);
     
+    // Do solve
+    mlmg.solve({&Epot}, {&rhs}, poisson_rel_tol, 0.0);
+
     // restore original solver tolerance
     if (electroneutral == 1) {
         Abort("ElectroDiffusiveMassFluxdiv.cpp: electroneutral not written yet");
@@ -286,15 +291,15 @@ void ElectroDiffusiveMassFlux(const MultiFab& rho,
     }
     AverageCCToFace(charge_coef, electro_mass_flux, 0, nspecies, SPEC_BC_COMP, geom);
 
+    // multiply flux coefficient by gradient of electric potential
     for (int i=0; i<AMREX_SPACEDIM; ++i) {
         for (int comp=0; comp<nspecies; ++comp) {
-            MultiFab::Multiply(electro_mass_flux[i], grad_Epot[i], 0, comp, 1, 1);
+            MultiFab::Multiply(electro_mass_flux[i], grad_Epot[i], 0, comp, 1, 0);
         }
     }
 
     if (use_multiphase == 1) {
-        Abort("ElectroDiffusiveMassFluxdiv.cpp: limit_emf not written yet");
-        // call limit_emf(rho, electro_mass_flux, grad_Epot)
+        LimitEMF(rho,electro_mass_flux);
     }
 
     // compute -rhoWchi * (... ) on faces
@@ -308,4 +313,60 @@ void ElectroDiffusiveMassFlux(const MultiFab& rho,
     // so the total mass flux (diff + stoch + Epot) is zero, but the numerical remedy here is to simply
     // zero them individually.
     ZeroEdgevalWalls(electro_mass_flux, geom, 0, nspecies);
+}
+
+
+void LimitEMF(const MultiFab& rho_in,
+              std::array< MultiFab, AMREX_SPACEDIM >& electro_mass_flux) {
+
+
+    for ( MFIter mfi(rho_in,TilingIfNotGPU()); mfi.isValid(); ++mfi ) {
+        const Box& bx = mfi.tilebox();
+
+        const Array4<Real const>& rho = rho_in.array(mfi);
+        
+        AMREX_D_TERM(const Array4<Real>& emfx = electro_mass_flux[0].array(mfi);,
+                     const Array4<Real>& emfy = electro_mass_flux[1].array(mfi);,
+                     const Array4<Real>& emfz = electro_mass_flux[2].array(mfi););
+
+        amrex::ParallelFor(bx, nspecies,  [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+        {
+            if (rho(i,j,k,n) <= 0.) {
+
+                if (emfx(i,j,k,n) > 0.) {
+                    for (int m=0; m<nspecies; ++m) {
+                        emfx(i,j,k,m) = 0.;
+                    }
+                }
+                if (emfx(i+1,j,k,n) < 0.) {
+                    for (int m=0; m<nspecies; ++m) {
+                        emfx(i+1,j,k,m) = 0.;
+                    }
+                }
+
+                if (emfy(i,j,k,n) > 0.) {
+                    for (int m=0; m<nspecies; ++m) {
+                        emfy(i,j,k,m) = 0.;
+                    }
+                }
+                if (emfy(i,j+1,k,n) < 0.) {
+                    for (int m=0; m<nspecies; ++m) {
+                        emfy(i,j+1,k,m) = 0.;
+                    }
+                }
+#if (AMREX_SPACEDIM == 3)
+                if (emfz(i,j,k,n) > 0.) {
+                    for (int m=0; m<nspecies; ++m) {
+                        emfz(i,j,k,m) = 0.;
+                    }
+                }
+                if (emfz(i,j,k+1,n) < 0.) {
+                    for (int m=0; m<nspecies; ++m) {
+                        emfz(i,j,k+1,m) = 0.;
+                    }
+                }
+#endif                
+            }
+        });
+    } // end MFIter
 }

@@ -27,8 +27,9 @@ void advance(std::array< MultiFab, AMREX_SPACEDIM >& umac,
 
   const Real* dx = geom.CellSize();
   const Real dtinv = 1.0/dt;
-  Real theta_alpha = 1.;
   Real norm_pre_rhs;
+
+  Real theta_alpha = (algorithm_type == 0) ? 1. : 0.;
 
   const BoxArray& ba = beta.boxArray();
   const DistributionMapping& dmap = beta.DistributionMap();
@@ -86,8 +87,27 @@ void advance(std::array< MultiFab, AMREX_SPACEDIM >& umac,
   // ADVANCE velocity field
   //////////////////////////////////////////////////
 
-  // increment advFluxdiv
-  MkAdvMFluxdiv(umac,umac,advFluxdiv,dx,0);
+  /*
+     Predictor
+
+     Inertial (algorithm_type = 0)
+
+     (u^{n+1,*} - u^n) / dt + grad(p) = A^n + (1/2)(div eta grad)(u^n + u^{n+1,*}) + F
+
+     (1/dt - (1/2) div eta grad) u^{n+1,*} + grad(p) = u^n / dt + A^n + (1/2) div eta grad u^n + F
+
+     Overdamped (algorithm_type = 1)
+
+     grad(p) = (1/2)(div eta grad)(u^n + u^{n+1,*}) + F
+
+     (0 - (1/2) div eta grad) u^{n+1,*} + grad(p) = (1/2) div eta grad u^n + F
+
+  */
+
+  if (algorithm_type == 0) {
+      // compute advFluxdiv
+      MkAdvMFluxdiv(umac,umac,advFluxdiv,dx,0);
+  }
 
   // compute t^n viscous operator, (1/2) L(u)
   // passing in theta_alpha=0 so alpha_fc doesn't matter
@@ -96,13 +116,19 @@ void advance(std::array< MultiFab, AMREX_SPACEDIM >& umac,
   StagApplyOp(geom,beta,gamma,beta_ed,umac,Lumac,alpha_fc,dx,0.);
 
   for (int d=0; d<AMREX_SPACEDIM; d++) {
-    MultiFab::Copy(gmres_rhs_u[d], umac[d], 0, 0, 1, 0);
-    gmres_rhs_u[d].mult(dtinv, 0);
-    MultiFab::Add(gmres_rhs_u[d], mfluxdiv_stoch[d], 0, 0, 1, 0);
-    // account for the negative viscous operator
-    MultiFab::Subtract(gmres_rhs_u[d], Lumac[d], 0, 0, 1, 0);
-    MultiFab::Add(gmres_rhs_u[d], advFluxdiv[d], 0, 0, 1, 0);
+      if (algorithm_type == 0) {
+          MultiFab::Copy(gmres_rhs_u[d], umac[d], 0, 0, 1, 0);
+          gmres_rhs_u[d].mult(dtinv, 0);
+          MultiFab::Add(gmres_rhs_u[d], advFluxdiv[d], 0, 0, 1, 0);
+      } else if (algorithm_type == 1) {
+          gmres_rhs_u[d].setVal(0.);
+      }
+      MultiFab::Add(gmres_rhs_u[d], mfluxdiv_stoch[d], 0, 0, 1, 0);
+      // account for the negative viscous operator
+      MultiFab::Subtract(gmres_rhs_u[d], Lumac[d], 0, 0, 1, 0);
   }
+  
+  ExternalForce(gmres_rhs_u,gmres_rhs_p);
 
   // turbulence forcing
   if (turbForcing == 1) {
@@ -114,12 +140,19 @@ void advance(std::array< MultiFab, AMREX_SPACEDIM >& umac,
   for (int d=0; d<AMREX_SPACEDIM; d++) {
     MultiFab::Copy(umacNew[d], umac[d], 0, 0, 1, 0);
   }
+    
+  Real gmres_abs_tol_in = gmres_abs_tol; // save this
 
   // call GMRES to compute predictor
   GMRES gmres(ba,dmap,geom);
   gmres.Solve(gmres_rhs_u,gmres_rhs_p,umacNew,pres,
               alpha_fc,beta,beta_ed,gamma,
               theta_alpha,geom,norm_pre_rhs);
+
+  // for the corrector gmres solve we want the stopping criteria based on the
+  // norm of the preconditioned rhs from the predictor gmres solve.  otherwise
+  // for cases where du in the corrector should be small the gmres stalls
+  gmres_abs_tol = amrex::max(gmres_abs_tol_in, norm_pre_rhs*gmres_rel_tol);
 
   // Compute predictor advective term
   for (int d=0; d<AMREX_SPACEDIM; d++) {
@@ -137,24 +170,49 @@ void advance(std::array< MultiFab, AMREX_SPACEDIM >& umac,
   tracer.FillBoundary(geom.periodicity());  
 
   //////////////////////////
-  
-  // increment advFluxdiv
-  MkAdvMFluxdiv(umacNew,umacNew,advFluxdiv,dx,1);
 
-  // trapezoidal advective terms
-  for (int d=0; d<AMREX_SPACEDIM; d++) {
-    advFluxdiv[d].mult(0.5, 1);
+  /*
+    Corrector
+
+    Inertial (algorithm_type = 0)
+
+    (u^{n+1} - u^n) / dt + grad(p) = (1/2)(A^n + A^{n+1}) + (1/2)(div eta grad)(u^n + u^{n+1}) + F
+
+    (1/dt - (1/2) div eta grad) u^{n+1} + grad(p) = u^n / dt + (1/2)(A^n + A^{n+1}) + (1/2) div eta grad u^n + F
+
+    Overdamped (algorithm_type = 1)
+
+    grad(p) = (1/2)(div eta grad)(u^n + u^{n+1}) + F
+
+    (0 - (1/2) div eta grad) u^{n+1} + grad(p) = (1/2) div eta grad u^n + F
+
+  */
+
+  if (algorithm_type == 0) {
+      // increment advFluxdiv
+      MkAdvMFluxdiv(umacNew,umacNew,advFluxdiv,dx,1);
+
+      // trapezoidal advective terms
+      for (int d=0; d<AMREX_SPACEDIM; d++) {
+          advFluxdiv[d].mult(0.5, 1);
+      }
   }
 
   // Compute gmres_rhs
   for (int d=0; d<AMREX_SPACEDIM; d++) {
-    MultiFab::Copy(gmres_rhs_u[d], umac[d], 0, 0, 1, 0);
-    gmres_rhs_u[d].mult(dtinv);
-    MultiFab::Add(gmres_rhs_u[d], mfluxdiv_stoch[d], 0, 0, 1, 0);
-    // account for the negative viscous operator
-    MultiFab::Subtract(gmres_rhs_u[d], Lumac[d], 0, 0, 1, 0);
-    MultiFab::Add(gmres_rhs_u[d], advFluxdiv[d], 0, 0, 1, 0);
+      if (algorithm_type == 0) {
+          MultiFab::Copy(gmres_rhs_u[d], umac[d], 0, 0, 1, 0);
+          gmres_rhs_u[d].mult(dtinv);
+          MultiFab::Add(gmres_rhs_u[d], advFluxdiv[d], 0, 0, 1, 0);
+      } else if (algorithm_type == 1) {
+          gmres_rhs_u[d].setVal(0.);
+      }
+      MultiFab::Add(gmres_rhs_u[d], mfluxdiv_stoch[d], 0, 0, 1, 0);
+      // account for the negative viscous operator
+      MultiFab::Subtract(gmres_rhs_u[d], Lumac[d], 0, 0, 1, 0);
   }
+
+  ExternalForce(gmres_rhs_u,gmres_rhs_p);
 
   // turbulence forcing
   if (turbForcing == 1) {
@@ -171,6 +229,8 @@ void advance(std::array< MultiFab, AMREX_SPACEDIM >& umac,
   gmres.Solve(gmres_rhs_u,gmres_rhs_p,umacNew,pres,
               alpha_fc,beta,beta_ed,gamma,
               theta_alpha,geom,norm_pre_rhs);
+    
+  gmres_abs_tol = gmres_abs_tol_in; // Restore the desired tolerance
 
   for (int d=0; d<AMREX_SPACEDIM; d++) {
     MultiFab::Copy(umac[d], umacNew[d], 0, 0, 1, 0);
