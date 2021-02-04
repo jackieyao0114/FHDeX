@@ -1,4 +1,5 @@
 #include "INS_functions.H"
+#include "common_functions.H"
 
 #include "common_namespace_declarations.H"
 
@@ -824,6 +825,7 @@ void main_driver(const char* argv)
 
 
     dt = dt*1e-5;
+    Vector<Real> sum(AMREX_SPACEDIM);
 
     for (int istep=step; istep<=max_step; ++istep) {
 
@@ -864,7 +866,7 @@ void main_driver(const char* argv)
         if(istep == 1)
         {
             particles.SetPosition(1, prob_hi[0]*0.25, prob_hi[1]*0.25, prob_hi[2]*0.5);
-            particles.SetPosition(2, prob_hi[0]*0.25, prob_hi[1]*0.25+2.0e-8, prob_hi[2]*0.5);
+            particles.SetPosition(2, prob_hi[0]*0.25, prob_hi[1]*0.25+32.0e-8, prob_hi[2]*0.5);
            
         }
 
@@ -1098,6 +1100,8 @@ void main_driver(const char* argv)
                             potential, potentialM, potentialV);
         }
 
+        SumStag(geom, umac, 0, sum, true);
+        amrex::Print() << "SUM" << " " << sum[0] << " " << sum[1] << " " << sum[2] << std::endl;
         particles.PrintParticles();
 
         // timer for time step
