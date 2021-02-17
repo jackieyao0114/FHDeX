@@ -81,6 +81,7 @@ void InitializeCommonNamespace() {
     sigma.resize(MAX_SPECIES);
     qval.resize(MAX_SPECIES);
 
+    // GALEN - FLUID KERNEL
     pkernel_fluid.resize(MAX_SPECIES);
     pkernel_es.resize(MAX_SPECIES);
 

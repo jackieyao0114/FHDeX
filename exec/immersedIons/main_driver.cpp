@@ -68,6 +68,7 @@ void main_driver(const char* argv)
     // AJN - for perdictor/corrector do we need one more ghost cell if the predictor pushes
     //       a particle into a ghost region?
     int ang = 1;
+    // GALEN - FLUID KERNEL
     // using maximum number of peskin kernel points to determine the ghost cells for the whole grid.
     //     not sure if it will cause problem for BCs.
     if (*(std::max_element(pkernel_fluid.begin(),pkernel_fluid.begin()+nspecies)) == 3) {
@@ -345,11 +346,11 @@ void main_driver(const char* argv)
 
     double realParticles = 0;
     double simParticles = 0;
-    double wetRad[nspecies];
+    double wetRad[nspecies]; // GALEN - FLUID KERNEL
     double dxAv = (dx[0] + dx[1] + dx[2])/3.0; //This is probably the wrong way to do this.
 
     for(int j=0;j<nspecies;j++) {
-
+       // GALEN - FLUID KERNEL
        if (pkernel_fluid[j] == 3) {
            wetRad[j] = 0.91*dxAv;
        }
@@ -374,6 +375,7 @@ void main_driver(const char* argv)
             // compute total diffusion from input diameter
             ionParticle[i].totalDiff = (k_B*T_init[0])/(6*3.14159265359*(diameter[i]/2.0)*visc_coef);
 
+            // GALEN - FLUID KERNEL
             // compute wet diffusion from wetRad
             ionParticle[i].wetDiff = (k_B*T_init[0])/(6*3.14159265359*wetRad[i]*visc_coef);
 
@@ -397,6 +399,7 @@ void main_driver(const char* argv)
 
                // std::cout << "Species " << i << " radius: " << ionParticle[i].d << std::endl;
 
+            // GALEN - FLUID KERNEL
             // compute wet diffusion from wetRad
             ionParticle[i].wetDiff = (k_B*T_init[0])/(6*3.14159265359*wetRad[i]*visc_coef);
 
@@ -879,7 +882,7 @@ void main_driver(const char* argv)
         if(istep == 1)
         {
             particles.SetPosition(1, prob_hi[0]*0.25, prob_hi[1]*0.25, prob_hi[2]*0.5);
-            particles.SetPosition(2, prob_hi[0]*0.25, prob_hi[1]*0.25+32.0e-8, prob_hi[2]*0.5);
+            particles.SetPosition(2, prob_hi[0]*0.25, prob_hi[1]*0.25+2.0e-8, prob_hi[2]*0.5);
            
         }
 

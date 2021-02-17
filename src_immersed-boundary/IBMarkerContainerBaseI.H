@@ -858,6 +858,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernelGpu(const AoS& ao
         int hi_dim[3];
         int gs;
 
+        // GALEN - FLUID KERNEL
         if(pkernel_fluid[p.idata(StructInt::species)-1] == 3)
         {
             gs = 2;
@@ -920,6 +921,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernelGpu(const AoS& ao
                       Real weight = 1.0;
                       for (int ii=0; ii<spaceDim; ++ii)
                       {
+                         // GALEN - FLUID KERNEL
                          if(pkernel_fluid[p.idata(StructInt::species)-1] == 3)
                          {
                             weight*=Kernel3P()(pos_grid[ii]);
@@ -951,6 +953,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernelGpu(const AoS& ao
                       Real weight = 1.0;
                       for (int ii=0; ii<spaceDim; ++ii)
                       {
+                         // GALEN - FLUID KERNEL
                          if(pkernel_fluid[p.idata(StructInt::species)-1] == 3)
                          {
                             weight*=Kernel3P()(pos_grid[ii]);
@@ -982,6 +985,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::SpreadKernelGpu(const AoS& ao
                       Real weight = 1.0;
                       for (int ii=0; ii<spaceDim; ++ii)
                       {
+                         // GALEN - FLUID KERNEL
                          if(pkernel_fluid[p.idata(StructInt::species)-1] == 3)
                          {
                             weight*=Kernel3P()(pos_grid[ii]);
@@ -1412,6 +1416,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernelGpu(AoS& aos
         int gs;
         int checkg = 0;
 
+        // GALEN - FLUID KERNEL
         if(pkernel_fluid[p.idata(StructInt::species)-1] == 3)
         {
             gs = 2;
@@ -1492,6 +1497,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernelGpu(AoS& aos
                   Real weight = 1.0;
                   for (int ii=0; ii<spaceDim; ++ii)
                   {
+                     // GALEN - FLUID KERNEL
                      if(pkernel_fluid[p.idata(StructInt::species)-1] == 3)
                      {
                         weight*=Kernel3P()(pos_grid[ii]);
@@ -1537,6 +1543,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernelGpu(AoS& aos
                   Real weight = 1.0;
                   for (int ii=0; ii<spaceDim; ++ii)
                   {
+                     // GALEN - FLUID KERNEL
                      if(pkernel_fluid[p.idata(StructInt::species)-1] == 3)
                      {
                         weight*=Kernel3P()(pos_grid[ii]);
@@ -1578,6 +1585,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::InterpolateKernelGpu(AoS& aos
                   Real weight = 1.0;
                   for (int ii=0; ii<spaceDim; ++ii)
                   {
+                     // GALEN - FLUID KERNEL
                      if(pkernel_fluid[p.idata(StructInt::species)-1] == 3)
                      {
                         weight*=Kernel3P()(pos_grid[ii]);
@@ -1985,7 +1993,7 @@ void IBMarkerContainerBase<StructReal, StructInt>::InitInternals(int ngrow) {
     // [spread,interpolate]_kernel
 
     // using the maximum number of peskin kernel points
-    int ngc_min_fluid = *(std::max_element(common::pkernel_fluid.begin(), common::pkernel_fluid.begin()+common::nspecies)) == 3 ? 3 : 5;
+    int ngc_min_fluid = *(std::max_element(common::pkernel_fluid.begin(), common::pkernel_fluid.begin()+common::nspecies)) == 3 ? 3 : 5; // GALEN - FLUID KERNEL
     int ngc_min_es    = *(std::max_element(common::pkernel_es.begin(), common::pkernel_es.begin()+common::nspecies)) == 3 ? 3 : 5;
     // Let's be on the safe side and use the larger out of the
     // fluid/electro-static kernels

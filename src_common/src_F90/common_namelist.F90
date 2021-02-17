@@ -27,7 +27,7 @@ module common_namelist_module
   double precision,   save :: transmission
 
   double precision,   save :: qval(MAX_SPECIES)
-  integer,            save :: pkernel_fluid(MAX_SPECIES)
+  integer,            save :: pkernel_fluid(MAX_SPECIES) ! GALEN - FLUID KERNEL
   integer,            save :: pkernel_es(MAX_SPECIES)
 
   double precision,   save :: mass(MAX_SPECIES)
@@ -543,7 +543,7 @@ contains
     p_force_tog(:) = 1
     p_int_tog(:) = 1
 
-    pkernel_fluid(:) = 4
+    pkernel_fluid(:) = 4 ! GALEN - FLUID KERNEL
     pkernel_es(:) = 4
     solve_chem = 0
     diffcoeff  = 0.001
@@ -674,7 +674,7 @@ contains
     double precision,       intent(inout) :: transmission_in
 
     double precision,       intent(inout) :: qval_in(MAX_SPECIES)
-    integer,                intent(inout) :: pkernel_fluid_in(MAX_SPECIES)
+    integer,                intent(inout) :: pkernel_fluid_in(MAX_SPECIES) ! GALEN - FLUID KERNEL
     integer,                intent(inout) :: pkernel_es_in(MAX_SPECIES)
 
     integer,                intent(inout) :: max_step_in

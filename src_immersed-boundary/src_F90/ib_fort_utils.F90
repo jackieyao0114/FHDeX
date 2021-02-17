@@ -741,6 +741,7 @@ contains
         ! branch point. JPB.
 
         !Using maximum number of peskin kernel points for ghost cells; not sure if it will cause problem to BCs.
+        ! GALEN - FLUID KERNEL
         if(maxval(pkernel_fluid(:)) .eq. 3) then 
           kernel_ptr => kernel_3p
           gs = 2
@@ -921,6 +922,7 @@ contains
         ! branch point. JPB.
 
         !Using maximum number of peskin kernel points for ghost cells; not sure if it will cause problem to BCs.
+        ! GALEN - FLUID KERNEL
         if(maxval(pkernel_fluid(:)) .eq. 3) then
           kernel_ptr => kernel_3p
           gs = 2
@@ -1214,6 +1216,7 @@ contains
         ! branch point. JPB.
 
         !Using maximum number of peskin kernel points for ghost cells; not sure if it will cause problem to BCs.
+        ! GALEN - FLUID KERNEL
         if(maxval(pkernel_fluid(:)) .eq. 3) then
           kernel_ptr => kernel_3p
           gs = 2
@@ -1538,6 +1541,7 @@ contains
         ! branch point. JPB.
 
         !Using maximum number of peskin kernel points for ghost cells; not sure if it will cause problem to BCs.
+        ! GALEN - FLUID KERNEL
         if(maxval(pkernel_fluid(:)) .eq. 3) then
           kernel_ptr => kernel_3p
           gs = 2
@@ -1888,6 +1892,7 @@ contains
         ! branch point. JPB.
 
         !Using maximum number of peskin kernel points for ghost cells; not sure if it will cause problem to BCs.
+        ! GALEN - FLUID KERNEL
         if(maxval(pkernel_fluid(:)) .eq. 3) then
           kernel_ptr => kernel_3p
           gs = 2

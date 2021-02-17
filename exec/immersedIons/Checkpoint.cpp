@@ -256,6 +256,7 @@ void ReadCheckPoint(int& step,
         
         //set number of ghost cells to fit whole peskin kernel
         int ang = 1;
+        // GALEN - FLUID KERNEL
         // using maximum number of peskin kernel points to determine the ghost cells for the whole grid.
         //     not sure if it will cause problem for BCs.
         if(*(std::max_element(pkernel_fluid.begin(),pkernel_fluid.begin()+nspecies)) == 3) {
@@ -425,6 +426,7 @@ void ReadCheckPointParticles(FhdParticleContainer& particles, species* particleI
         
         //set number of ghost cells to fit whole peskin kernel
         int ang = 1;
+        // GALEN - FLUID KERNEL
         // using maximum number of peskin kernel points to determine the ghost cells for the whole grid.
         //     not sure if it will cause problem for BCs.
         if(*(std::max_element(pkernel_fluid.begin(),pkernel_fluid.begin()+nspecies)) == 3) {
